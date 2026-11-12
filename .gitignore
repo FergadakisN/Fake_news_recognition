@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data & models (keep folder structure, ignore contents)
+data/**/*
+!data/**/
+!data/**/.gitkeep
+models/*
+!models/.gitkeep
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
