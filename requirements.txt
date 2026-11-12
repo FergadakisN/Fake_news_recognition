@@ -1,5 +1,6 @@
 numpy
 pandas
+kagglehub
 scikit-learn
 matplotlib
 seaborn

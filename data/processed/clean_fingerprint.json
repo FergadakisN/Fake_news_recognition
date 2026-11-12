@@ -1,0 +1,16 @@
+{
+  "clean": {
+    "content_sha256": "f2d74f61997a21b46c2b29da54f443d1f9b17231ce9e8038fd28d9e915815ec2",
+    "doc_ids_labels_sha256": "36afe3c28ab9efd0d308a85780f527b2c84b5752f0063f517cf82b2c871f2331",
+    "n_fake": 28261,
+    "n_rows": 63018,
+    "title_text_sha256": "e42ef8c0f850a1a8b9454680da118561b916cd9a38a7564fbb3383287d2c31ea"
+  },
+  "clean_with_markers": {
+    "content_sha256": "e308126a5d92fffe5aa1081a8def54f65ebf858fb2dcb7f10f97a7bf3ad08c84",
+    "doc_ids_labels_sha256": "36afe3c28ab9efd0d308a85780f527b2c84b5752f0063f517cf82b2c871f2331",
+    "n_fake": 28261,
+    "n_rows": 63018,
+    "title_text_sha256": "c26f43a7b87611862b6a28feec2f4b0bd9452f55065f34a41734341225175102"
+  }
+}
