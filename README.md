@@ -10,6 +10,18 @@ so that all models are trained and scored on exactly the same data.
 
 For a runnable walkthrough, open [notebooks/00-how-to-use.ipynb](notebooks/00-how-to-use.ipynb).
 
+> **Start here: run these once, before opening any notebook or running any model**
+>
+> ```bash
+> pip install -r requirements.txt
+> pip install -e .                  # makes `import fake_news` work everywhere
+> python3 scripts/prepare_data.py   # downloads, cleans and verifies the data (~3 min)
+> ```
+>
+> `prepare_data.py` must finish with **`All checks passed`**. Only then is your data identical to
+> everyone else's. Run it again (`--rebuild`) whenever you pull changes to `src/fake_news/data/`
+> or to `data/processed/`. Details in [section 1](#1-setup-once).
+
 ---
 
 ## 1. Setup (once)
