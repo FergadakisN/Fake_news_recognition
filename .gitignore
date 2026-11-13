@@ -13,6 +13,8 @@ venv/
 data/**/*
 !data/**/
 !data/**/.gitkeep
+!data/processed/splits.csv
+!data/processed/clean_fingerprint.json
 models/*
 !models/.gitkeep
 
