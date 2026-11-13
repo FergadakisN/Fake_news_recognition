@@ -1,0 +1,32 @@
+{
+  "rules_version": "9a4c780111ed",
+  "n_rules": 44,
+  "rows": {
+    "raw_rows": 72134,
+    "dropped_empty_text": 883,
+    "dropped_non_english": 462,
+    "dropped_conflicting_labels": 0,
+    "dropped_duplicates": 8264,
+    "clean_rows": 62525
+  },
+  "row_filters": {
+    "empty_text": "Text is empty after normalization and marker removal (782 of the 783 originally empty texts are fake).",
+    "non_english": "Not English (G3): >30% of letters outside the Latin script (Cyrillic, Arabic, ...), or, for texts with >= 20 words, more Spanish/French/German/Italian/Portuguese function words than English ones. Almost all such articles are fake, so they reveal the label.",
+    "duplicate": "Exact duplicate of the cleaned content of an article with a lower doc_id (the lowest is kept).",
+    "conflicting_labels": "The same cleaned content appears with both labels (all copies dropped)."
+  },
+  "dropped_by_reason_and_class": {
+    "duplicate": {
+      "real": 270,
+      "fake": 7994
+    },
+    "empty_text": {
+      "real": 1,
+      "fake": 882
+    },
+    "non_english": {
+      "real": 1,
+      "fake": 461
+    }
+  }
+}

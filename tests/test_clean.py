@@ -75,7 +75,7 @@ def test_clean_dataset_drops_empty_duplicates_and_conflicts():
     out = clean_dataset(raw)
     assert out["doc_id"].tolist() == [0, 6]
     assert out.attrs["report"] == {
-        "raw_rows": 7, "dropped_empty_text": 2, "dropped_conflicting_labels": 2,
+        "raw_rows": 7, "dropped_empty_text": 2, "dropped_non_english": 0, "dropped_conflicting_labels": 2,
         "dropped_duplicates": 1, "clean_rows": 2,
     }
     assert list(out.columns) == ["doc_id", "title", "text", "content", "n_words", "is_fake"]

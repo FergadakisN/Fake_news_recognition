@@ -2,7 +2,7 @@
 
 Typical use::
 
-    from fake_news.data.load import load_dataset
+    from fake_news.data import load_dataset
     df = load_dataset("random")          # cleaned articles + a `split` column
     train = df[df.split == "train"]
 """
@@ -15,9 +15,12 @@ from pathlib import Path
 import pandas as pd
 
 from fake_news import config
-from fake_news.data.integrity import check_fingerprint, check_splits_match, verify_raw_file
+from fake_news.data.integrity import DataMismatchError, check_fingerprint, check_splits_match, verify_raw_file
 
 _TEXT_COLS = {"title": str, "text": str, "content": str}
+# Always read title/text as text. Otherwise pandas guesses per chunk, and a chunk whose titles are
+# all missing (or all numeric, e.g. "1984") would be read as numbers.
+RAW_DTYPES = {"title": str, "text": str}
 
 
 def download_dataset(force: bool = False) -> Path:
@@ -54,7 +57,7 @@ def load_raw(download: bool = True) -> pd.DataFrame:
         if not download:
             raise FileNotFoundError(f"{config.RAW_CSV} not found. Run `python3 scripts/prepare_data.py`.")
         download_dataset()
-    df = pd.read_csv(config.RAW_CSV)
+    df = pd.read_csv(config.RAW_CSV, dtype=RAW_DTYPES)
     return df.rename(columns={"Unnamed: 0": "doc_id"})[["doc_id", "title", "text", "label"]]
 
 
@@ -91,18 +94,30 @@ def load_clean(remove_markers: bool = True, rebuild: bool = False, verify: bool 
     - ``columns=["content"]`` loads only those columns (plus ``doc_id``, ``is_fake``). The full
       table takes roughly 1-1.5 GB of RAM; ``doc_id, is_fake, content`` about half of that.
 
-    The result is cached in ``data/interim/``; it is built on first use (a few minutes).
-    With ``verify=True`` the loaded columns are compared with the committed fingerprint and a
-    ``DataMismatchError`` is raised if they differ from everyone else's.
+    Nothing has to be prepared by hand: on first use the raw data is downloaded and cleaned
+    (about 3 minutes) and cached in ``data/interim/``. The loaded data is compared with the committed
+    fingerprint; if the cached copy is outdated (e.g. the cleaning rules changed after a ``git pull``)
+    it is rebuilt automatically. ``DataMismatchError`` is raised only if a fresh build still differs
+    from the reference (e.g. an incompatible library version).
     """
-    path = config.CLEAN_CSV if remove_markers else config.CLEAN_WITH_MARKERS_CSV
-    if rebuild or not path.exists():
-        from fake_news.data.clean import build_clean_dataset
+    from fake_news.data.clean import build_clean_dataset
 
+    path = config.CLEAN_CSV if remove_markers else config.CLEAN_WITH_MARKERS_CSV
+    variant = "clean" if remove_markers else "clean_with_markers"
+    built = rebuild or not path.exists()
+    if built:
         build_clean_dataset()
     df = read_clean_csv(path, columns)
     if verify:
-        check_fingerprint(df, "clean" if remove_markers else "clean_with_markers")
+        try:
+            check_fingerprint(df, variant)
+        except DataMismatchError:
+            if built:
+                raise
+            print(f"{path.name} does not match the reference (outdated after a change?); rebuilding...")
+            build_clean_dataset()
+            df = read_clean_csv(path, columns)
+            check_fingerprint(df, variant)
     return df
 
 

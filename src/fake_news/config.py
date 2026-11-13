@@ -16,6 +16,7 @@ INTERIM_DIR = DATA_DIR / "interim"
 PROCESSED_DIR = DATA_DIR / "processed"
 PREDICTIONS_DIR = PROCESSED_DIR / "predictions"
 FIGURES_DIR = PROJECT_ROOT / "reports" / "figures"
+CLEANING_REPORT_DIR = PROJECT_ROOT / "reports" / "cleaning"  # cleaning log + decisions (committed)
 
 KAGGLE_DATASET = "saurabhshahane/fake-news-classification"
 KAGGLE_VERSION = 77  # pinned: a newer upload on Kaggle must not silently change our data

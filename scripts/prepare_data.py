@@ -1,11 +1,16 @@
 """Download WELFake, build the cleaned dataset and (if missing) the random split, then verify it all.
 
+Teammates do not need this script: ``load_dataset()`` downloads, cleans and verifies automatically on
+first use. Run it to prepare everything up front and see a full check report, or (Person 1) to
+update the reference after changing the cleaning rules.
+
 Usage:
     python3 scripts/prepare_data.py            # download + clean (both variants) + split_random + checks
     python3 scripts/prepare_data.py --rebuild  # rebuild the cleaned CSVs from the raw file
 
-    # Person 1 only, after changing the cleaning rules on purpose (then commit the JSON):
-    python3 scripts/prepare_data.py --rebuild --update-fingerprint
+    # Person 1 only, after changing the cleaning rules on purpose (then commit the JSON, the new
+    # splits.csv and reports/cleaning/). --new-split recreates splits.csv because the rows changed.
+    python3 scripts/prepare_data.py --rebuild --update-fingerprint --new-split
 
 Checks (any failure stops with an explanation):
     1. raw CSV is the pinned Kaggle version (SHA-256)
@@ -46,7 +51,16 @@ def main() -> None:
     parser.add_argument("--rebuild", action="store_true", help="rebuild the cleaned CSVs even if they exist")
     parser.add_argument("--update-fingerprint", action="store_true",
                         help="store this build as the new reference (Person 1 only; implies --rebuild)")
+    parser.add_argument("--new-split", action="store_true",
+                        help="recreate splits.csv from scratch (Person 1 only; when the cleaned rows changed)")
     args = parser.parse_args()
+
+    if args.new_split and config.SPLITS_CSV.exists():
+        existing = [c for c in pd.read_csv(config.SPLITS_CSV, nrows=0).columns if c.startswith("split_")]
+        if existing != ["split_random"]:
+            sys.exit(f"Refusing --new-split: splits.csv already has {existing}; those regimes would be lost.")
+        config.SPLITS_CSV.unlink()
+        print(f"Removed old {config.SPLITS_CSV.name} (--new-split)")
 
     print("[1/3] Raw data")
     print(f"  {download_dataset()} (Kaggle version {config.KAGGLE_VERSION}, SHA-256 verified)")
@@ -54,7 +68,7 @@ def main() -> None:
     print("[2/3] Cleaned data")
     missing = not (config.CLEAN_CSV.exists() and config.CLEAN_WITH_MARKERS_CSV.exists())
     if args.rebuild or args.update_fingerprint or missing:
-        build_clean_dataset(update_fingerprint=args.update_fingerprint)  # checks fingerprints itself
+        build_clean_dataset(update_fingerprint=args.update_fingerprint)  # checks fingerprints, writes the log
     else:
         for variant, path in (("clean", config.CLEAN_CSV), ("clean_with_markers", config.CLEAN_WITH_MARKERS_CSV)):
             verify_clean_file(path, variant)

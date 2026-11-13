@@ -1,0 +1,45 @@
+order,rule,field,group,source,raw_real,raw_fake,kept_real,kept_fake,description,example
+1,nyt_briefing_title,title,G1,New York Times (real),185,0,185,0,Newsletter name used as title.,"U.S. Senate, Orlando, Donald Trump: Your Tuesday Evening Briefing"
+2,title_tag,title,R1,fake sites,4,6778,4,5472,All-caps tags in brackets.,Trump Rants At Reporters (VIDEO)
+3,title_source_suffix,title,R1,"NYT, Breitbart, fake sites",8561,606,8560,434,Outlet name appended to the title.,Senate passes bill - The New York Times
+4,embedded_code,text,G2,fake sites,0,186,0,147,"Scraped JavaScript (Facebook SDK loader, CDATA blocks).","(function(d, s, id) { var js, fjs = d.getElementsByTagName(s)[0]; ... 'facebook-jssdk'));"
+5,tweet_embed,text,G2,"embedded tweets/Instagram (both classes, different formats)",656,6372,656,5066,Attribution line of an embedded post: (@handle) + date [+ time]. The post text itself is kept.,"Ben Sasse (@BenSasse) September 28, 2017Spencer responded..."
+6,pic_twitter_residue,text,G2,Breitbart (real),435,3992,435,3092,Broken pic.twitter.com links of embedded tweets.,...not in this new bill from the House GOP pic. twitter. During...
+7,reuters_dateline,text,R1,Reuters (real),21174,0,20925,0,Dateline at the start of Reuters articles.,WASHINGTON (Reuters) - The U.S. Senate voted...
+8,reuters_tag,text,R1,Reuters (real),94,16,93,13,Any remaining (Reuters) tag.,He told (Reuters) that...
+9,agency_dateline,text,G1,"CNN, AP, AFP (mostly real)",456,168,454,120,Dateline/tag of other agencies.,(CNN) For many Americans across the country...
+10,agency_credits,text,R1,"Reuters, AP (real)",514,11,513,8,Reporting/editing credits and the SAP sponsor note.,(Reporting by Jane Doe; Editing by John Roe)
+11,reuters_notes,text,G1,Reuters (real),656,0,646,0,"Correction notes, graphic links and sponsor disclaimers.","(This version of the story corrects 17th paragraph ...) / For graphic on X, click tmsnrt.rs/2vO4hPW"
+12,reuters_tweet_disclaimer,text,G1,Reuters (real),95,0,94,0,Disclaimer above Reuters' Trump-tweet factboxes.,"The following statements were posted to the verified Twitter accounts of U.S. President Donald Trump, and . The opinions expressed are his own. Reuters has not edited the statements or confirmed their accuracy."
+13,nyt_briefing,text,G1,New York Times (real),271,0,271,0,Newsletter boilerplate of the NYT 'Briefing' articles.,"Your Evening Briefing is posted at 6 p.m. Eastern. And don't miss Your Morning Briefing, ..."
+14,breitbart_promo,text,G1,Breitbart (real),767,7,767,4,"Radio promos, author bios and book promos.",Charlie Nash is a reporter for Breitbart Tech. / Breitbart News Daily airs on SiriusXM Patriot 125 ...
+15,21wire_acr,text,G2,21st Century Wire (fake),4,1236,4,655,"Repost notes, 'READ MORE ... Files' lines and ACR radio ads.","READ MORE 2016 ELECTION NEWS AT: 21st Century Wire 2016 Files / Join us for uncensored, uninterruptible talk radio..."
+16,21wire_boilerplate,text,R1,21st Century Wire (fake),0,1442,0,732,Subscription line and outlet name.,SUPPORT OUR WORK BY SUBSCRIBING & BECOME A MEMBER @21WIRE.TV
+17,scraper_boilerplate,text,R1,various,1,600,1,470,Share widgets and newsletter prompts.,Get short URL / Share on Facebook Share on Twitter / Want to get this briefing by email?
+18,blog_footer,text,G2,fake sites,5,662,5,519,Blog-software footers and navigation.,The post X appeared first on Shadowproof. / This entry was posted in General. Bookmark the permalink.
+19,comment_widgets,text,G2,fake sites,4,507,4,400,Comment forms and widgets.,Leave a Reply Click here to get more info on formatting / FaceBook Comments You must be logged in to post a comment
+20,share_donate,text,G2,fake sites,100,3582,100,2597,"Share, print, subscribe, donate and 'read more' calls to action.","Please share this story / Republish our reports, analyses, breaking news and videos (click for details)"
+21,license_lines,text,G2,fake sites,1,262,1,202,"Republication licenses, disclaimers, obfuscated emails.",You have permission to republish this article under a Creative Commons license with full attribution
+22,daily_sheeple,text,G2,The Daily Sheeple (fake),0,112,0,91,Repost boilerplate of The Daily Sheeple.,Delivered by The Daily Sheeple We encourage you to share and ( Click for details ). Contributed by X of The Daily Sheeple .
+23,breadcrumbs,text,G2,fake sites,8,342,8,156,Navigation breadcrumbs.,Home » Headlines » World News » Breaking: ...
+24,post_dates,text,G2,fake sites,3,823,3,662,"Publication dates in page-header context ('Posted on <date> by X', '| <date>', '<date> 2 Comments'). Dates inside sentences are kept (G5).","Matt Agorist October 27, 2016 2 Comments"
+25,timestamps,text,G2,fake sites,10,243,10,172,Relative and UTC timestamps.,"Published: 23 mins ago / Sun, 23 Oct 2016 00:00 UTC"
+26,header_credits,text,G2,fake sites,11,162,11,128,Photo copyright lines and 'Fort Russ' translation headers.,"© Naif Rahma / Reuters / November 20, 2016 - Fort Russ - ... - translated by J. Arnoldski -"
+27,contact_lines,text,G1,"Breitbart (real), various",579,406,578,321,"Author contact sentences ('You can follow/email ...'), including their handles and emails.",You can follow him on Twitter @MrNashington or like his page at Facebook.
+28,social_byline,text,R1,"Breitbart (real), various",1935,348,1935,284,'Follow X on Twitter' bylines.,Follow Pam Key on Twitter @pamkeyNEN
+29,url,text,R1,various (mostly fake),256,4803,254,3620,URLs and common short links.,https://example.com/a / bit.ly/2jBh4LU
+30,other_links,text,G1,"Reuters (real), various",301,30,300,16,"Links with any other domain (tmsnrt.rs, reut.rs, ...).",click tmsnrt.rs/2fjdh4j
+31,broken_links,text,G1,"Breitbart (real), various",293,6,293,5,Broken links such as 'https: //t.co/...'.,#MayorsStand4All https: . - Mayor Adler
+32,email,text,R1,"NYT, Breitbart (real)",512,237,512,177,"Email addresses, including the scraped 'name@site. com' form.",briefing@nytimes. com
+33,twitter_handle,text,R1,various,2463,3134,2462,2522,@handles.,Ask @realDonaldTrump now.
+34,glued_handle,text,G2,embedded tweets (fake),7,71,7,48,@handles glued to the previous word.,"September 4, 2016@realDonaldTrump funny because..."
+35,image_credit,text,R1,fake sites,0,6572,0,6530,Image credit at the end of the text.,Featured image via Chip Somodevilla/Getty Images
+36,featured_image,text,R1,fake sites,0,2012,0,1989,Any remaining 'Featured image ...' credit.,Featured image is a screenshot
+37,photo_by_getty,text,R1,fake sites,1,365,1,365,'Photo by X/Getty Images' credits.,Photo by Win McNamee/Getty Images.
+38,getty_images,text,R1,fake sites,4,178,4,168,Any remaining 'Getty Images'.,Getty Images
+39,media_credit_inline,text,G2,fake sites,8,955,8,908,Inline media credits: '<media> via <Source>'.,Here s the video via YouTube:
+40,media_credit_end,text,G2,fake sites,4,3150,4,1907,"A final line that starts with a credit word: 'Image:', 'Photo credit:', 'H/T', 'Via ...'.",Image: Gage Skidmore via Flickr.
+41,comment_timestamp,text,G2,scraped comment sections (fake),3,132,3,111,Comment timestamps and 'Reply' links.,"| February 18, 2016 at 7:33 am | Reply"
+42,byline,text,G2,fake sites,26,1113,25,863,"'By Author Name' (2-3 name words) at the start of the text or of a sentence, or anywhere when followed by ', on <date>'.",By Daisy Luther Let's talk about Wikileaks.
+43,nyt_separator,text,G1,New York Times (real),262,19,261,16,Underscore separator lines.,"_____ 2. Mr. Trump, who was named..."
+44,empty_brackets,text,G2,cleanup,750,341,750,256,Brackets emptied by the rules above (e.g. removed handles).,Ben Sasse ( ) September 28

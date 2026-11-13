@@ -136,10 +136,6 @@ def save_fingerprint_values(values: dict, variant: str) -> None:
     config.FINGERPRINT_JSON.write_text(json.dumps(expected, indent=2, sort_keys=True) + "\n")
 
 
-def save_fingerprint(df: pd.DataFrame, variant: str) -> None:
-    save_fingerprint_values(fingerprint(df), variant)
-
-
 def check_fingerprint_values(actual: dict, variant: str) -> bool:
     """Compare a fingerprint with the stored reference (only the keys present in ``actual``).
 

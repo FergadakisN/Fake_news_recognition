@@ -11,7 +11,7 @@ from fake_news.data.integrity import (
     check_fingerprint,
     check_splits_match,
     fingerprint,
-    save_fingerprint,
+    save_fingerprint_values,
     sha256_file,
     verify_raw_file,
 )
@@ -54,7 +54,7 @@ def test_streamed_file_fingerprint_equals_in_memory(df, tmp_path):
 
 
 def test_partial_columns_are_checked_on_what_is_loaded(df):
-    save_fingerprint(df, "clean")
+    save_fingerprint_values(fingerprint(df), "clean")
     assert check_fingerprint(df[["doc_id", "is_fake", "content"]], "clean")
     assert check_fingerprint(df[["doc_id", "is_fake"]], "clean")
     with pytest.raises(DataMismatchError, match="content_sha256"):
@@ -62,7 +62,7 @@ def test_partial_columns_are_checked_on_what_is_loaded(df):
 
 
 def test_save_then_check(df):
-    save_fingerprint(df, "clean")
+    save_fingerprint_values(fingerprint(df), "clean")
     assert check_fingerprint(df, "clean")
     with pytest.raises(DataMismatchError, match="content_sha256"):
         check_fingerprint(df.assign(content=["x", "y", "z"]), "clean")
