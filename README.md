@@ -165,16 +165,13 @@ X = embeddings_for(train.doc_id)     # (n, 384) float32, row i belongs to train.
 - Always load them with `embeddings_for`, never with `np.load` directly: it matches rows to `doc_id`s and checks
   that the embeddings belong to the current cleaned data (`StaleEmbeddingsError` otherwise).
 
-**Person 3, after the cleaning changes:** `python3 scripts/compute_embeddings.py` (GPU recommended; must end with
-**`All checks passed`**), then commit the three files in `data/processed/embeddings/`.
-
 Details and figures: [notebooks/03-embeddings.ipynb](notebooks/03-embeddings.ipynb).
 
 ### Paths and constants
 
 ```python
 from fake_news import config
-config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, config.FIGURES_DIR
+config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, config.FIGURES_DIR, config.EMBEDDINGS_DIR
 ```
 
 ---
