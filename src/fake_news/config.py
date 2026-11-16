@@ -31,6 +31,8 @@ FINGERPRINT_JSON = PROCESSED_DIR / "clean_fingerprint.json"
 # this, not with the dataset size (5,000 rows ~ a few hundred MB).
 CLEAN_CHUNK_ROWS = 5_000
 
+EMBEDDINGS_DIR = PROCESSED_DIR / "embeddings"
+
 SEED = 42
 SPLIT_NAMES = ("train", "val", "test")
 SPLIT_FRACTIONS = (0.70, 0.15, 0.15)  # train / val / test

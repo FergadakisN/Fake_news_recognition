@@ -75,6 +75,7 @@ or put this at the top of your notebook:
 | Seed | `fake_news.config.SEED` (42). |
 | Metrics | `evaluate(y_true, y_prob)` with fake as the positive class. |
 | Predictions | One CSV per model and regime: `doc_id, split, prob_fake`, written with `save_predictions()`. |
+| Embeddings | `embeddings_for(doc_ids)`: 384-d Sentence-BERT vectors (`all-MiniLM-L6-v2`) of `content`, L2-normalized, in `data/processed/embeddings/`. **Committed to git.** |
 
 ### Rules that keep the results honest
 
@@ -148,6 +149,27 @@ save_split_column("grouped", split)                         # adds split_grouped
 For a few large K-means clusters use `make_group_split(clean, clusters, stratify=False)`.
 `save_split_column` refuses to overwrite an existing column unless `overwrite=True`.
 
+### Sentence embeddings (Person 3)
+
+The embeddings are committed to git: after pulling, nothing needs to be computed.
+
+```python
+from fake_news.features.embeddings import embeddings_for
+
+X = embeddings_for(train.doc_id)     # (n, 384) float32, row i belongs to train.doc_id.iloc[i]
+```
+
+- The encoder is pretrained and never fitted on our data, so embeddings cover all cleaned articles and do not depend
+  on the split. Anything fitted *on* them (PCA, K-means, classifiers) is fitted on `train` only.
+- Vectors are normalized: cosine similarity is `X[i] @ X[j]`, and Euclidean K-means behaves like cosine K-means.
+- Always load them with `embeddings_for`, never with `np.load` directly: it matches rows to `doc_id`s and checks
+  that the embeddings belong to the current cleaned data (`StaleEmbeddingsError` otherwise).
+
+**Person 3, after the cleaning changes:** `python3 scripts/compute_embeddings.py` (GPU recommended; must end with
+**`All checks passed`**), then commit the three files in `data/processed/embeddings/`.
+
+Details and figures: [notebooks/03-embeddings.ipynb](notebooks/03-embeddings.ipynb).
+
 ### Paths and constants
 
 ```python
@@ -166,6 +188,7 @@ config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, 
 | `data/interim/welfake_clean_with_markers.csv` | no | Same rows, source markers kept |
 | `data/processed/splits.csv` | **yes** | Shared splits |
 | `data/processed/clean_fingerprint.json` | **yes** | Row counts + hashes of the cleaned data |
+| `data/processed/embeddings/minilm__clean{.npy,__doc_ids.npy,.json}` | **yes** | Sentence embeddings (float16, ~48 MB), their `doc_id`s and metadata |
 | `data/processed/predictions/<model>__<regime>.csv` | no | `doc_id, split, prob_fake` |
 
 ### What cleaning does
@@ -213,7 +236,7 @@ Everything needed to describe the data and the cleaning in the report:
 
 | Path | What it is |
 |---|---|
-| `reports/figures/` | Figures saved by notebooks 01 and 02 |
+| `reports/figures/` | Figures saved by notebooks 01, 02 and 03 |
 | `reports/cleaning/DECISIONS.md` | The cleaning decision record (written by hand): principle, process, every decision with its reason |
 | `reports/cleaning/cleaning_summary.json` | Rows per cleaning step, dropped rows per reason and class, rules version |
 | `reports/cleaning/marker_hits.csv` | Per cleaning rule: articles it changed, per class (raw and cleaned) |
@@ -252,17 +275,17 @@ Unit tests on small examples, plus checks of your real data against the referenc
 │   ├── raw/            Original WELFake CSV (not in git)
 │   ├── external/       Third-party data
 │   ├── interim/        Cleaned data (not in git)
-│   └── processed/      splits.csv, clean_fingerprint.json (in git), predictions/ (not in git)
+│   └── processed/      splits.csv, clean_fingerprint.json, embeddings/ (in git), predictions/ (not in git)
 ├── models/             Trained and serialized models
-├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning
+├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings
 ├── reports/
 │   ├── cleaning/       Cleaning log, DECISIONS.md (in git)
 │   └── figures/        Figures for the report
-├── scripts/            prepare_data.py (data)
+├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions
 │   ├── data/           load.py, clean.py, markers.py (rules + decisions), split.py, integrity.py
-│   ├── features/       Text preprocessing and feature extraction
+│   ├── features/       Text preprocessing and feature extraction; embeddings.py (sentence embeddings)
 │   ├── models/         Training and prediction
 │   └── evaluation/     metrics.py (evaluate), predictions.py (shared prediction files)
 ├── tests/              Unit tests
