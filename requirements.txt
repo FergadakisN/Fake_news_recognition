@@ -7,3 +7,4 @@ seaborn
 nltk
 jupyter
 pytest
+sentence-transformers>=3.0

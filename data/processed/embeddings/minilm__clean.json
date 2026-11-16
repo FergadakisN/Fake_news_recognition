@@ -1,0 +1,24 @@
+{
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "max_seq_length": 256,
+  "dim": 384,
+  "normalized": true,
+  "stored_as": "float16",
+  "input": "content (load_clean)",
+  "sample": null,
+  "n_docs": 62525,
+  "n_clean_total": 62525,
+  "n_empty_inputs": 0,
+  "data_fingerprint": "260fa3c700b5f74e",
+  "doc_ids_hash": "0ae9f5b9f30b18e1",
+  "device": "cuda:0",
+  "batch_size": 128,
+  "seconds": 180.2,
+  "docs_per_second": 347.0,
+  "created": "2026-11-14T16:38:30+00:00",
+  "versions": {
+    "sentence_transformers": "6.3.0",
+    "transformers": "5.23.0",
+    "torch": "2.15.0+cu132"
+  }
+}

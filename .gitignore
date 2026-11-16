@@ -15,6 +15,9 @@ data/**/*
 !data/**/.gitkeep
 !data/processed/splits.csv
 !data/processed/clean_fingerprint.json
+!data/processed/embeddings/minilm__clean.npy
+!data/processed/embeddings/minilm__clean__doc_ids.npy
+!data/processed/embeddings/minilm__clean.json
 models/*
 !models/.gitkeep
 
