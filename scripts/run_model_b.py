@@ -5,10 +5,14 @@
 
 Steps:
     1. shingles + MinHash signatures of all articles (no fitting: the hash functions are fixed by config.SEED)
-    2. for each retrieval method (LSH 16x8, 32x4, 64x2 and exact search as a reference):
-       index the TRAIN articles, query the VAL articles, tune k and min_sim on val
-    3. pick the LSH banding with the best val F1 (with the 0.5 fallback), query val + test with it,
-       save predictions (data/processed/predictions/model_b__<regime>.csv)
+    2. for each retrieval method (3-word shingles with LSH 16x8, 32x4, 64x2 and exact search as a
+       reference; 2-word shingles with LSH 64x2 as an ablation): index the TRAIN articles, query the
+       VAL articles, tune k and min_sim on val
+    3. pick the LSH method with the best val ROC-AUC, query val + test with it, save its predictions
+       (data/processed/predictions/model_b__<regime>.csv)
+
+Uncovered articles (no neighbour) get the fake rate of the training articles as prob_fake.
+Main metrics: coverage, F1 on covered articles, ROC-AUC; overall F1 is secondary.
 
 Test articles are predicted but never scored here (README rule 3: test is used once, at the end, for all models).
 
@@ -33,11 +37,12 @@ from fake_news.data import load_dataset
 from fake_news.evaluation import save_predictions
 from fake_news.models import model_b as mb
 
-METHODS = {  # name -> (bands, rows, exact)
-    "lsh_16x8": (16, 8, False),
-    "lsh_32x4": (32, 4, False),
-    "lsh_64x2": (64, 2, False),
-    "exact": (64, 2, True),   # every training article compared; bands/rows unused
+METHODS = {  # name -> (bands, rows, exact search?, words per shingle)
+    "lsh_16x8": (16, 8, False, 3),
+    "lsh_32x4": (32, 4, False, 3),
+    "lsh_64x2": (64, 2, False, 3),
+    "exact": (64, 2, True, 3),        # every training article compared; bands/rows unused
+    "lsh_64x2_k2": (64, 2, False, 2),  # ablation: 2-word shingles
 }
 REPORT_DIR = config.PROJECT_ROOT / "reports" / "model_b"
 
@@ -57,35 +62,44 @@ def main() -> int:
     train, val, test = (df[df.split == s].reset_index(drop=True) for s in config.SPLIT_NAMES)
     print(f"regime {regime!r}: train {len(train):,}, val {len(val):,}, test {len(test):,}")
 
-    t0 = time.perf_counter()
-    enc = {name: mb.encode(part["content"].tolist()) for name, part in (("train", train), ("val", val), ("test", test))}
-    print(f"shingles + signatures: {time.perf_counter() - t0:.0f} s "
-          f"(val without signature: {(~enc['val'].has_sig).sum()})")
+    encodings: dict[int, dict] = {}  # words per shingle -> {"train"|"val"|"test": Encoded}
+
+    def encoded(shingle_k: int) -> dict:
+        """Shingles + signatures of all three partitions, computed once per shingle size."""
+        if shingle_k not in encodings:
+            t0 = time.perf_counter()
+            encodings[shingle_k] = {name: mb.encode(part["content"].tolist(), shingle_k=shingle_k)
+                                    for name, part in (("train", train), ("val", val), ("test", test))}
+            print(f"  ({shingle_k}-word shingles + signatures: {time.perf_counter() - t0:.0f} s)")
+        return encodings[shingle_k]
 
     # ---- compare retrieval methods on val -----------------------------------------------------------------
-    grids, best_rows, models = [], [], {}
-    for name, (bands, rows, exact) in METHODS.items():
+    grids, best_rows = [], []
+    for name, (bands, rows, exact, shingle_k) in METHODS.items():
         if exact and args.skip_exact:
             continue
+        enc = encoded(shingle_k)
         t0 = time.perf_counter()
-        knn = mb.MinHashKNN(bands, rows).fit(None, train["is_fake"], encoded=enc["train"])
+        knn = mb.MinHashKNN(bands, rows, shingle_k=shingle_k).fit(None, train["is_fake"], encoded=enc["train"])
         fit_s = time.perf_counter() - t0
         nb = knn.neighbors(encoded=enc["val"], exact=exact)
         grid = mb.tune(knn, nb, val["is_fake"]).assign(method=name)
         best = mb.best_setting(grid)
         best_rows.append({
-            "method": name, "k": int(best["k"]), "min_sim": best["min_sim"],
+            "method": name, "shingle_words": shingle_k, "k": int(best["k"]), "min_sim": best["min_sim"],
             **{c: best[c] for c in ("coverage", "coverage_fake", "coverage_real", "f1_covered", "accuracy_covered",
                                     "f1_overall", "accuracy_overall", "roc_auc_overall")},
             "coverage_at_0.1": grid.loc[grid.min_sim == mb.MIN_SIM_GRID[0], "coverage"].iloc[0],
             "candidates_per_query": nb.n_candidates.mean(),
+            "candidates_p90": np.quantile(nb.n_candidates, 0.9),
             "ms_per_query": 1000 * (nb.lookup_seconds + nb.scoring_seconds) / len(nb),
             "index_seconds": fit_s,
         })
         grids.append(grid)
-        models[name] = knn
-        print(f"  {name:9s} best k={int(best['k']):2d} min_sim={best['min_sim']:.2f}  coverage {best['coverage']:.3f}  "
-              f"F1 covered {best['f1_covered']:.3f}  F1 overall {best['f1_overall']:.3f}  "
+        del knn, nb  # models hold a copy of the train shingles; refit only the chosen one below
+        print(f"  {name:12s} best k={int(best['k']):2d} min_sim={best['min_sim']:.2f}  coverage {best['coverage']:.3f}  "
+              f"F1 covered {best['f1_covered']:.3f}  AUC {best['roc_auc_overall']:.3f}  "
+              f"F1 overall {best['f1_overall']:.3f}  "
               f"{best_rows[-1]['candidates_per_query']:.0f} cand/query  {best_rows[-1]['ms_per_query']:.2f} ms/query")
 
     comparison = pd.DataFrame(best_rows).set_index("method")
@@ -93,13 +107,15 @@ def main() -> int:
     comparison.round(4).to_csv(REPORT_DIR / f"{regime}_banding_comparison.csv")
     pd.concat(grids).round(4).to_csv(REPORT_DIR / f"{regime}_tuning.csv", index=False)
 
-    # ---- final model: best LSH banding on val --------------------------------------------------------------
+    # ---- final model: best LSH method on val (AUC; ties: F1 on covered, then speed) -----------------------
     lsh_rows = comparison.loc[[m for m in comparison.index if m.startswith("lsh_")]]
-    chosen = lsh_rows.sort_values(["f1_overall", "roc_auc_overall", "ms_per_query"],
+    chosen = lsh_rows.sort_values(["roc_auc_overall", "f1_covered", "ms_per_query"],
                                   ascending=[False, False, True]).index[0]
     k, min_sim = int(comparison.at[chosen, "k"]), float(comparison.at[chosen, "min_sim"])
-    knn = models[chosen]
-    print(f"\nchosen on val: {chosen}, k={k}, min_sim={min_sim}")
+    bands, rows, _, shingle_k = METHODS[chosen]
+    enc = encoded(shingle_k)
+    knn = mb.MinHashKNN(bands, rows, shingle_k=shingle_k).fit(None, train["is_fake"], encoded=enc["train"])
+    print(f"\nchosen on val: {chosen}, k={k}, min_sim={min_sim}, fallback (train fake rate) {knn.fallback_:.4f}")
 
     preds, coverage, val_metrics = [], [], None
     for split, part in (("val", val), ("test", test)):
@@ -117,8 +133,10 @@ def main() -> int:
     pd.concat(coverage).sort_values("doc_id").to_csv(cov_path, index=False)
     print(f"saved {path.relative_to(config.PROJECT_ROOT)} and {cov_path.name}")
 
-    summary = {"regime": regime, "chosen_method": chosen, "k": k, "min_sim": min_sim,
-               "fallback_prob": mb.FALLBACK_PROB, "val": {m: round(float(v), 4) for m, v in val_metrics.items()},
+    summary = {"regime": regime, "chosen_method": chosen, "shingle_words": METHODS[chosen][3], "k": k,
+               "min_sim": min_sim, "bands": METHODS[chosen][0], "rows": METHODS[chosen][1],
+               "fallback_prob": round(knn.fallback_, 6), "selection": "max val ROC-AUC over LSH methods",
+               "metric_note": "main: coverage, f1_covered, roc_auc_overall; secondary: f1_overall, accuracy_overall", "val": {m: round(float(v), 4) for m, v in val_metrics.items()},
                "n": {"train": len(train), "val": len(val), "test": len(test)}}
     (REPORT_DIR / f"{regime}_summary.json").write_text(json.dumps(summary, indent=2))
     print("\nval metrics of the chosen model:")
