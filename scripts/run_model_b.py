@@ -1,0 +1,133 @@
+"""Model B: k-NN over 3-word shingle sets with a train-only MinHash/LSH index. Tune on val, save predictions.
+
+    python scripts/run_model_b.py                     # regime "random"
+    python scripts/run_model_b.py --regime grouped    # once Person 1 has added split_grouped to splits.csv
+
+Steps:
+    1. shingles + MinHash signatures of all articles (no fitting: the hash functions are fixed by config.SEED)
+    2. for each retrieval method (LSH 16x8, 32x4, 64x2 and exact search as a reference):
+       index the TRAIN articles, query the VAL articles, tune k and min_sim on val
+    3. pick the LSH banding with the best val F1 (with the 0.5 fallback), query val + test with it,
+       save predictions (data/processed/predictions/model_b__<regime>.csv)
+
+Test articles are predicted but never scored here (README rule 3: test is used once, at the end, for all models).
+
+Outputs:
+    reports/model_b/<regime>_banding_comparison.csv   best setting per retrieval method (val)
+    reports/model_b/<regime>_tuning.csv               every (method, k, min_sim) on val
+    reports/model_b/<regime>_summary.json             chosen setting, val metrics, timings
+    data/processed/predictions/model_b__<regime>.csv               doc_id, split, prob_fake (val + test)
+    data/processed/predictions/model_b__<regime>__coverage.csv     doc_id, split, covered, n_neighbors, top_sim
+"""
+
+import argparse
+import json
+import sys
+import time
+
+import numpy as np
+import pandas as pd
+
+from fake_news import config
+from fake_news.data import load_dataset
+from fake_news.evaluation import save_predictions
+from fake_news.models import model_b as mb
+
+METHODS = {  # name -> (bands, rows, exact)
+    "lsh_16x8": (16, 8, False),
+    "lsh_32x4": (32, 4, False),
+    "lsh_64x2": (64, 2, False),
+    "exact": (64, 2, True),   # every training article compared; bands/rows unused
+}
+REPORT_DIR = config.PROJECT_ROOT / "reports" / "model_b"
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--regime", default="random", choices=config.REGIMES)
+    ap.add_argument("--skip-exact", action="store_true", help="leave out the exact-search reference (~1-2 min)")
+    args = ap.parse_args()
+    regime = args.regime
+
+    try:
+        df = load_dataset(regime, columns=["content"])
+    except KeyError as e:
+        print(f"{e}\nsplit_{regime} is not in splits.csv yet (Person 1 adds it). Pull it from git, then re-run.")
+        return 1
+    train, val, test = (df[df.split == s].reset_index(drop=True) for s in config.SPLIT_NAMES)
+    print(f"regime {regime!r}: train {len(train):,}, val {len(val):,}, test {len(test):,}")
+
+    t0 = time.perf_counter()
+    enc = {name: mb.encode(part["content"].tolist()) for name, part in (("train", train), ("val", val), ("test", test))}
+    print(f"shingles + signatures: {time.perf_counter() - t0:.0f} s "
+          f"(val without signature: {(~enc['val'].has_sig).sum()})")
+
+    # ---- compare retrieval methods on val -----------------------------------------------------------------
+    grids, best_rows, models = [], [], {}
+    for name, (bands, rows, exact) in METHODS.items():
+        if exact and args.skip_exact:
+            continue
+        t0 = time.perf_counter()
+        knn = mb.MinHashKNN(bands, rows).fit(None, train["is_fake"], encoded=enc["train"])
+        fit_s = time.perf_counter() - t0
+        nb = knn.neighbors(encoded=enc["val"], exact=exact)
+        grid = mb.tune(knn, nb, val["is_fake"]).assign(method=name)
+        best = mb.best_setting(grid)
+        best_rows.append({
+            "method": name, "k": int(best["k"]), "min_sim": best["min_sim"],
+            **{c: best[c] for c in ("coverage", "coverage_fake", "coverage_real", "f1_covered", "accuracy_covered",
+                                    "f1_overall", "accuracy_overall", "roc_auc_overall")},
+            "coverage_at_0.1": grid.loc[grid.min_sim == mb.MIN_SIM_GRID[0], "coverage"].iloc[0],
+            "candidates_per_query": nb.n_candidates.mean(),
+            "ms_per_query": 1000 * (nb.lookup_seconds + nb.scoring_seconds) / len(nb),
+            "index_seconds": fit_s,
+        })
+        grids.append(grid)
+        models[name] = knn
+        print(f"  {name:9s} best k={int(best['k']):2d} min_sim={best['min_sim']:.2f}  coverage {best['coverage']:.3f}  "
+              f"F1 covered {best['f1_covered']:.3f}  F1 overall {best['f1_overall']:.3f}  "
+              f"{best_rows[-1]['candidates_per_query']:.0f} cand/query  {best_rows[-1]['ms_per_query']:.2f} ms/query")
+
+    comparison = pd.DataFrame(best_rows).set_index("method")
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    comparison.round(4).to_csv(REPORT_DIR / f"{regime}_banding_comparison.csv")
+    pd.concat(grids).round(4).to_csv(REPORT_DIR / f"{regime}_tuning.csv", index=False)
+
+    # ---- final model: best LSH banding on val --------------------------------------------------------------
+    lsh_rows = comparison.loc[[m for m in comparison.index if m.startswith("lsh_")]]
+    chosen = lsh_rows.sort_values(["f1_overall", "roc_auc_overall", "ms_per_query"],
+                                  ascending=[False, False, True]).index[0]
+    k, min_sim = int(comparison.at[chosen, "k"]), float(comparison.at[chosen, "min_sim"])
+    knn = models[chosen]
+    print(f"\nchosen on val: {chosen}, k={k}, min_sim={min_sim}")
+
+    preds, coverage, val_metrics = [], [], None
+    for split, part in (("val", val), ("test", test)):
+        nb = knn.neighbors(encoded=enc[split])
+        prob, covered = knn.predict_proba(nb, k, min_sim)
+        preds.append(pd.DataFrame({"doc_id": part["doc_id"], "split": split, "prob_fake": prob}))
+        n_used = [int(min(k, (s >= min_sim).sum())) for s in nb.sims]
+        coverage.append(pd.DataFrame({"doc_id": part["doc_id"], "split": split, "covered": covered,
+                                      "n_neighbors": n_used,
+                                      "top_sim": [float(s[0]) if len(s) else 0.0 for s in nb.sims]}))
+        if split == "val":  # test is never scored here
+            val_metrics = mb.score(prob, covered, part["is_fake"])
+    path = save_predictions(pd.concat(preds), model="model_b", regime=regime)
+    cov_path = path.with_name(f"model_b__{regime}__coverage.csv")
+    pd.concat(coverage).sort_values("doc_id").to_csv(cov_path, index=False)
+    print(f"saved {path.relative_to(config.PROJECT_ROOT)} and {cov_path.name}")
+
+    summary = {"regime": regime, "chosen_method": chosen, "k": k, "min_sim": min_sim,
+               "fallback_prob": mb.FALLBACK_PROB, "val": {m: round(float(v), 4) for m, v in val_metrics.items()},
+               "n": {"train": len(train), "val": len(val), "test": len(test)}}
+    (REPORT_DIR / f"{regime}_summary.json").write_text(json.dumps(summary, indent=2))
+    print("\nval metrics of the chosen model:")
+    print(pd.Series(val_metrics).round(3).to_string())
+    print("\nComparison on val (best k / min_sim per method):")
+    with pd.option_context("display.width", 250):
+        print(comparison.round(3).to_string())
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
