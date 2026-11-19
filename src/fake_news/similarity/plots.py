@@ -107,10 +107,12 @@ def group_sizes(table: pd.DataFrame):
     sizes = np.arange(2, table["size"].max() + 1)
     real = table.loc[~majority_fake, "size"].value_counts().reindex(sizes, fill_value=0)
     fake = table.loc[majority_fake, "size"].value_counts().reindex(sizes, fill_value=0)
-    ax.bar(sizes, real, color=REAL, width=0.8, label="mostly real", edgecolor=SURFACE, linewidth=1)
-    ax.bar(sizes, fake, bottom=real, color=FAKE, width=0.8, label="mostly fake", edgecolor=SURFACE, linewidth=1)
-    ax.set_yscale("symlog", linthresh=1)
-    ax.set(xlabel="group size (articles)", ylabel="groups (symlog scale)",
+    # Side by side, not stacked: on a log scale stacked segments would misrepresent the shares.
+    ax.bar(sizes - 0.2, real, color=REAL, width=0.4, label="mostly real", edgecolor=SURFACE, linewidth=1)
+    ax.bar(sizes + 0.2, fake, color=FAKE, width=0.4, label="mostly fake", edgecolor=SURFACE, linewidth=1)
+    ax.set_yscale("log")
+    ax.set_ylim(bottom=0.7)
+    ax.set(xlabel="group size (articles)", ylabel="groups (log scale)",
            title=f"{len(table):,} near-duplicate groups with 2+ articles")
     ax.legend(loc="upper right")
     return fig

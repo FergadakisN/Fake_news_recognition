@@ -9,11 +9,11 @@
     "threshold": 0.7
   },
   "seconds": {
-    "load": 3.77,
+    "load": 3.69,
     "minhash": 0.03,
-    "lsh": 2.2,
+    "lsh": 2.14,
     "verify": 1.7,
-    "recall": 4.9,
+    "recall": 4.87,
     "groups": 0.11
   },
   "signatures_from_cache": true,

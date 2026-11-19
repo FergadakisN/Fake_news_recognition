@@ -84,7 +84,6 @@ def main() -> int:
         cands = nd.verify_candidates(cands, df)
         err = (cands["minhash"] - cands["jaccard"]).abs()
         print(f"  exact Jaccard: median {cands.jaccard.median():.3f}; MinHash estimate mean |error| {err.mean():.3f}")
-        cands.to_csv(config.INTERIM_DIR / "minhash_candidates.csv", index=False)  # for the notebook, not in git
 
     with stage("recall", seconds):
         loose = nd.verify_candidates(nd.find_candidates(table, bands=32, rows=4), df)
