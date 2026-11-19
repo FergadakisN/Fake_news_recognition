@@ -56,5 +56,22 @@ get the fallback and so count as predicted real.
   (12.9% vs 9.6%: fake stories get re-posted). With 2-word shingles real ones are (20.8% vs 16.0%), presumably because
   Reuters-style articles share fixed phrasing.
 - **Under the random split, much of the high F1 on covered articles is near-duplicate matching.** Near-copies of a val
-  article sit in train. The grouped split (`python scripts/run_model_b.py --regime grouped`, once `split_grouped`
-  exists) measures how much is left. That run re-tunes on its own val, so it may choose a different configuration.
+  article sit in train. The grouped split measures how much is left (next section).
+
+## Random vs grouped split (val)
+
+`split_grouped` keeps every near-duplicate group (J ≥ 0.7, `near_dup_groups.csv`) in one partition. The design is
+fixed across regimes (2-word shingles, 64 × 2). Only `k` and `min_sim` were retuned on grouped val, and they came
+out the same (k = 5, min_sim = 0.10). So the differences below come from the split alone. (The two val sets contain
+different articles but have the same class balance, 44.4% fake.)
+
+| Val set | Coverage | Fake / real coverage | F1 covered | ROC-AUC | F1 overall |
+|---|---|---|---|---|---|
+| random | 18.6% | 16.0% / 20.8% | 0.942 | 0.652 | 0.261 |
+| grouped | 17.4% | 13.1% / 20.8% | 0.918 | 0.639 | 0.211 |
+
+Under the random split, **277 val articles (3.0%) have a near-duplicate in train**: 4.8% of the fake ones and 1.4% of
+the real ones. Under the grouped split there are none, by construction. Removing them costs fake articles almost
+3 points of coverage and leaves real ones unchanged. F1 on covered articles drops by 0.024 and ROC-AUC by 0.013. The
+drop is moderate because cleaning had already removed exact duplicates, and only ~4% of articles are in near-duplicate
+groups at all. Test is not scored.

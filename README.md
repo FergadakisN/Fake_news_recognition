@@ -196,12 +196,13 @@ groups = load_groups()               # pd.Series doc_id -> group_id, ready for m
 
 ```bash
 python scripts/run_model_b.py                        # regime "random", ~10 min
-python scripts/run_model_b.py --regime grouped       # once split_grouped is in splits.csv
+python scripts/run_model_b.py --regime grouped       # same design; only k and min_sim retuned
 ```
 
 The script compares retrieval settings on val, tunes `k` and `min_sim` on val, and picks the setting with the highest
 val ROC-AUC. On the random split it chose 2-word shingles with 64 × 2 bands
-([reasons](reports/minhash/MODEL_B_CHOICE.md)). Test articles are predicted but never scored.
+([reasons](reports/minhash/MODEL_B_CHOICE.md)). Other regimes keep that design and retune only `k` and `min_sim`
+on their own val (`--design fixed`), so regimes differ only in the split. Test articles are predicted but never scored.
 
 - `data/processed/predictions/model_b__<regime>.csv`: `doc_id, split, prob_fake` for val and test, the shared format.
 - `data/processed/predictions/model_b__<regime>__coverage.csv`: `doc_id, split, covered, n_neighbors, top_sim`.
