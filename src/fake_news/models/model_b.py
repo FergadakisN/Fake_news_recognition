@@ -11,7 +11,8 @@ An article is classified by the labels of the most similar *training* articles:
 
        prob_fake = sum(sim_i * is_fake_i) / sum(sim_i)
 
-   An article with no such neighbour is *not covered* and gets ``prob_fake = 0.5``.
+   An article with no such neighbour is *not covered* and gets the fake rate of the training
+   articles (computed in ``fit``, about 0.444), i.e. the best guess without evidence.
 
 The banding decides which neighbours can be found at all. The 16 x 8 banding of the near-duplicate
 groups only finds pairs above ~0.6 (see ``fake_news.similarity.lsh``). Retrieval wants lower
@@ -32,7 +33,6 @@ from fake_news.similarity.lsh import LSHIndex
 from fake_news.similarity.near_duplicates import MIN_SHINGLES
 from fake_news.similarity.shingles import K, shingle_ids
 
-FALLBACK_PROB = 0.5   # prob_fake of an article without neighbours
 SIM_FLOOR = 0.1       # neighbours below this similarity are never kept (lowest min_sim we tune)
 
 
@@ -103,6 +103,7 @@ class MinHashKNN:
         self.labels_ = np.asarray(labels, dtype=float)
         if len(self.labels_) != len(enc):
             raise ValueError("labels and texts have different lengths")
+        self.fallback_ = float(self.labels_.mean())   # prob_fake of uncovered articles: train fake rate
 
         # All training shingle sets in one flat array (CSR layout): article i is
         # flat[offsets[i]:offsets[i + 1]]. One array instead of 44k small ones makes scoring vectorizable.
@@ -190,9 +191,9 @@ class MinHashKNN:
         """``prob_fake`` per query and ``covered`` (has at least one neighbour with similarity >= ``min_sim``).
 
         ``prob_fake`` is the similarity-weighted share of fake labels among the top ``k`` neighbours,
-        or ``FALLBACK_PROB`` (0.5) for uncovered queries.
+        or ``fallback_`` (the train fake rate) for uncovered queries.
         """
-        prob = np.full(len(nb), FALLBACK_PROB)
+        prob = np.full(len(nb), self.fallback_)
         covered = np.zeros(len(nb), dtype=bool)
         for i, (r, s) in enumerate(zip(nb.rows, nb.sims)):
             keep = s >= min_sim             # sorted descending, so the kept ones come first
@@ -215,8 +216,9 @@ MIN_SIM_GRID = (0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5)
 def score(prob: np.ndarray, covered: np.ndarray, y: np.ndarray) -> dict:
     """Coverage (overall and per class) and the shared metrics on covered articles and on all articles.
 
-    "Overall" uses the 0.5 fallback for uncovered articles. ``evaluate`` predicts fake when
-    prob >= 0.5, so uncovered articles count as predicted fake.
+    Main metrics: coverage, F1 on covered articles, ROC-AUC over all articles. "Overall" F1/accuracy
+    (secondary) include the uncovered articles with the train-fake-rate fallback (< 0.5, so ``evaluate``
+    counts them as predicted real).
     """
     from fake_news.evaluation import evaluate
 
@@ -246,6 +248,10 @@ def tune(knn: MinHashKNN, nb: Neighbors, y, ks=K_GRID, min_sims=MIN_SIM_GRID) ->
 
 
 def best_setting(grid: "pd.DataFrame") -> "pd.Series":
-    """The row with the highest overall F1; ties go to higher ROC-AUC, then smaller k and higher min_sim."""
-    order = grid.sort_values(["f1_overall", "roc_auc_overall", "k", "min_sim"], ascending=[False, False, True, False])
+    """The row with the highest ROC-AUC over all val articles; ties go to higher F1 on covered articles.
+
+    AUC is the selection metric because it combines the two main metrics: how many articles get a
+    neighbour (coverage) and how well those neighbours rank fake above real.
+    """
+    order = grid.sort_values(["roc_auc_overall", "f1_covered", "k", "min_sim"], ascending=[False, False, True, False])
     return order.iloc[0]

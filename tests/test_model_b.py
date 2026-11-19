@@ -32,7 +32,7 @@ def test_unrelated_text_finds_nothing(knn):
     nb = knn.neighbors([UNRELATED])
     assert len(nb.rows[0]) == 0
     prob, covered = knn.predict_proba(nb, k=10, min_sim=0.1)
-    assert not covered[0] and prob[0] == mb.FALLBACK_PROB
+    assert not covered[0] and prob[0] == knn.fallback_
 
 
 def test_short_text_is_not_covered(knn):
@@ -58,7 +58,7 @@ def test_vote_is_similarity_weighted_and_respects_k_and_min_sim():
     prob, _ = knn.predict_proba(nb, k=2, min_sim=0.1)       # top 2 only
     assert np.isclose(prob[0], 0.6 / 0.9)
     prob, covered = knn.predict_proba(nb, k=10, min_sim=0.7)  # nothing similar enough
-    assert not covered[0] and prob[0] == mb.FALLBACK_PROB
+    assert not covered[0] and prob[0] == knn.fallback_
 
 
 def test_all_fake_neighbours_give_exactly_one():
@@ -68,6 +68,18 @@ def test_all_fake_neighbours_give_exactly_one():
                       n_candidates=np.array([10]), lookup_seconds=0.0, scoring_seconds=0.0)
     prob, _ = knn.predict_proba(nb, k=10, min_sim=0.1)
     assert prob[0] == 1.0
+
+
+def test_fallback_is_train_fake_rate():
+    knn = mb.MinHashKNN(64, 2).fit(TRAIN, LABELS)
+    assert knn.fallback_ == np.mean(LABELS)
+    prob, covered = knn.predict_proba(knn.neighbors([UNRELATED]), k=5, min_sim=0.1)
+    assert not covered[0] and prob[0] == 0.5   # 2 of 4 toy training articles are fake
+
+
+def test_shingle_size_is_used():
+    knn = mb.MinHashKNN(64, 2, shingle_k=2).fit(TRAIN, LABELS)
+    assert len(knn.encode(["one two three four"]).shingles[0]) == 3   # 2-word shingles
 
 
 def test_bands_times_rows_must_match_signature_length():
@@ -81,4 +93,4 @@ def test_tune_and_best_setting():
     grid = mb.tune(knn, nb, LABELS + [0], ks=(1, 3), min_sims=(0.1, 0.5))
     assert len(grid) == 4 and grid["coverage"].max() == 0.8   # 4 of 5 queries are in the index
     best = mb.best_setting(grid)
-    assert best["f1_overall"] == grid["f1_overall"].max()
+    assert best["roc_auc_overall"] == grid["roc_auc_overall"].max()
