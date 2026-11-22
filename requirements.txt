@@ -2,6 +2,7 @@ numpy
 pandas
 kagglehub
 scikit-learn
+scipy
 matplotlib
 seaborn
 nltk
