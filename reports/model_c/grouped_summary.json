@@ -1,0 +1,68 @@
+{
+  "regime": "grouped",
+  "design": "compare",
+  "k": 8,
+  "c": 100.0,
+  "n_components": 200,
+  "explained_variance": 0.1542,
+  "tfidf_words": 48130,
+  "min_cluster_size": 200,
+  "fallback_clusters": 0,
+  "selection": "max val ROC-AUC of model_c over the K x C grid",
+  "grid": {
+    "k": [
+      8,
+      16,
+      32
+    ],
+    "c": [
+      10.0,
+      30.0,
+      100.0
+    ]
+  },
+  "val": {
+    "model_c": {
+      "roc_auc": 0.9758,
+      "accuracy": 0.9229,
+      "f1": 0.9129,
+      "precision": 0.9159,
+      "recall": 0.9099
+    },
+    "global_lr": {
+      "c": 10.0,
+      "roc_auc": 0.978,
+      "accuracy": 0.9288,
+      "f1": 0.9196,
+      "precision": 0.9218,
+      "recall": 0.9174
+    },
+    "topic_only": {
+      "k": 8,
+      "roc_auc": 0.7623,
+      "accuracy": 0.6913,
+      "f1": 0.6312,
+      "precision": 0.6719,
+      "recall": 0.5951
+    },
+    "hybrid_avg": {
+      "k": 8,
+      "c": 100.0,
+      "roc_auc": 0.9799,
+      "accuracy": 0.933,
+      "f1": 0.9243,
+      "precision": 0.9277,
+      "recall": 0.921
+    }
+  },
+  "n": {
+    "train": 43765,
+    "val": 9380,
+    "test": 9380
+  },
+  "seconds": {
+    "load": 0.6,
+    "features": 9.5,
+    "tuning": 18.2
+  }
+}

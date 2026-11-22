@@ -1,0 +1,64 @@
+{
+  "regime": "random",
+  "design": "fixed",
+  "k": 8,
+  "c": 100.0,
+  "n_components": 200,
+  "explained_variance": 0.1542,
+  "tfidf_words": 48158,
+  "min_cluster_size": 200,
+  "fallback_clusters": 0,
+  "selection": "K and C fixed from grouped_summary.json",
+  "grid": {
+    "k": [
+      8
+    ],
+    "c": [
+      100.0
+    ]
+  },
+  "val": {
+    "model_c": {
+      "roc_auc": 0.9759,
+      "accuracy": 0.9239,
+      "f1": 0.9147,
+      "precision": 0.911,
+      "recall": 0.9184
+    },
+    "global_lr": {
+      "c": 10.0,
+      "roc_auc": 0.9776,
+      "accuracy": 0.9281,
+      "f1": 0.919,
+      "precision": 0.9203,
+      "recall": 0.9177
+    },
+    "topic_only": {
+      "k": 8,
+      "roc_auc": 0.7516,
+      "accuracy": 0.6877,
+      "f1": 0.5501,
+      "precision": 0.7638,
+      "recall": 0.4299
+    },
+    "hybrid_avg": {
+      "k": 8,
+      "c": 100.0,
+      "roc_auc": 0.9801,
+      "accuracy": 0.933,
+      "f1": 0.9247,
+      "precision": 0.924,
+      "recall": 0.9253
+    }
+  },
+  "n": {
+    "train": 43767,
+    "val": 9379,
+    "test": 9379
+  },
+  "seconds": {
+    "load": 0.6,
+    "features": 9.8,
+    "tuning": 3.3
+  }
+}
