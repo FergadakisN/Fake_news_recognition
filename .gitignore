@@ -25,3 +25,6 @@ models/*
 .DS_Store
 .vscode/
 .idea/
+
+# Course material (local reference only)
+*.pdf
