@@ -1,0 +1,117 @@
+{
+  "settings": {
+    "shingle_words": 3,
+    "n_hashes": 128,
+    "bands": 16,
+    "rows": 8,
+    "seed": 42,
+    "min_shingles": 5,
+    "threshold": 0.7
+  },
+  "seconds": {
+    "load": 3.69,
+    "minhash": 0.03,
+    "lsh": 2.14,
+    "verify": 1.7,
+    "recall": 4.87,
+    "groups": 0.11
+  },
+  "signatures_from_cache": true,
+  "n_articles": 62525,
+  "articles_without_signature": 79,
+  "candidate_pairs": 3954,
+  "buckets_2plus": 10908,
+  "largest_bucket": 38,
+  "minhash_mean_abs_error": 0.0213,
+  "jaccard_histogram": {
+    "0.00": 0,
+    "0.05": 0,
+    "0.10": 0,
+    "0.15": 0,
+    "0.20": 0,
+    "0.25": 2,
+    "0.30": 1,
+    "0.35": 4,
+    "0.40": 18,
+    "0.45": 21,
+    "0.50": 60,
+    "0.55": 163,
+    "0.60": 149,
+    "0.65": 182,
+    "0.70": 167,
+    "0.75": 196,
+    "0.80": 192,
+    "0.85": 342,
+    "0.90": 1334,
+    "0.95": 1123
+  },
+  "lsh_recall_vs_32x4": [
+    {
+      "threshold": 0.5,
+      "reference_pairs": 6258,
+      "found": 3908,
+      "recall": 0.6245
+    },
+    {
+      "threshold": 0.6,
+      "reference_pairs": 4430,
+      "found": 3687,
+      "recall": 0.8323
+    },
+    {
+      "threshold": 0.7,
+      "reference_pairs": 3472,
+      "found": 3354,
+      "recall": 0.966
+    },
+    {
+      "threshold": 0.75,
+      "reference_pairs": 3208,
+      "found": 3187,
+      "recall": 0.9935
+    },
+    {
+      "threshold": 0.8,
+      "reference_pairs": 2997,
+      "found": 2991,
+      "recall": 0.998
+    },
+    {
+      "threshold": 0.85,
+      "reference_pairs": 2799,
+      "found": 2799,
+      "recall": 1.0
+    },
+    {
+      "threshold": 0.9,
+      "reference_pairs": 2457,
+      "found": 2457,
+      "recall": 1.0
+    }
+  ],
+  "groups": {
+    "n_articles": 62525,
+    "groups_2plus": 1002,
+    "articles_in_groups_2plus": 2445,
+    "share_articles_in_groups": 0.0391,
+    "largest_group": 40,
+    "mixed_label_groups": 13,
+    "articles_in_mixed_groups": 28,
+    "group_size_counts": {
+      "2": 820,
+      "3": 105,
+      "4": 33,
+      "5": 17,
+      "6": 8,
+      "7": 8,
+      "8": 2,
+      "9": 1,
+      "10": 1,
+      "11": 2,
+      "13": 2,
+      "20": 1,
+      "26": 1,
+      "40": 1
+    }
+  }
+}

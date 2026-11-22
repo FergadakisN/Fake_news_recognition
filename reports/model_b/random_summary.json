@@ -1,0 +1,27 @@
+{
+  "regime": "random",
+  "chosen_method": "lsh_64x2_k2",
+  "shingle_words": 2,
+  "k": 5,
+  "min_sim": 0.1,
+  "bands": 64,
+  "rows": 2,
+  "fallback_prob": 0.444125,
+  "selection": "max val ROC-AUC over LSH methods",
+  "metric_note": "main: coverage, f1_covered, roc_auc_overall; secondary: f1_overall, accuracy_overall",
+  "val": {
+    "coverage": 0.1865,
+    "coverage_fake": 0.1601,
+    "coverage_real": 0.2076,
+    "f1_covered": 0.9418,
+    "accuracy_covered": 0.9554,
+    "f1_overall": 0.2608,
+    "accuracy_overall": 0.6186,
+    "roc_auc_overall": 0.6524
+  },
+  "n": {
+    "train": 43767,
+    "val": 9379,
+    "test": 9379
+  }
+}
