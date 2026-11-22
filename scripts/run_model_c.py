@@ -14,7 +14,8 @@ Steps (everything fitted on TRAIN only):
     3. per C: a global logistic regression (the comparison) and one logistic regression per cluster
        (fallback to the global one for clusters with < 200 train articles or one class)
     4. scored on val next to two references: "topic_only" (P(fake) = fake share of the article's cluster in
-       train) and "hybrid_avg" (average of the global LR and Model C; analysis only, not a submitted model)
+       train) and "hybrid_avg" (average of Model C and the global LR at its best C; analysis only, not a
+       submitted model)
     5. the chosen setting predicts val + test; predictions and cluster assignments are saved
 
 Test articles are predicted but never scored here (README rule 3: test is used once, at the end, for all models).
@@ -95,6 +96,9 @@ def main() -> int:
         globals_[c] = mc.fit_global_lr(Xtr, ytr, c)
         p_glob = globals_[c].predict_proba(Xva)[:, 1]
         rows.append(dict(model="global_lr", k=1, c=c, fallback_clusters=0, **scores(yva, p_glob)))
+    # hybrid_avg always averages Model C with the *tuned* global LR (its own best C on val)
+    c_glob = max(globals_, key=lambda c: next(r["roc_auc"] for r in rows if r["model"] == "global_lr" and r["c"] == c))
+    p_glob_best = globals_[c_glob].predict_proba(Xva)[:, 1]
     kms, fitted = {}, {}
     for k in k_grid:
         kms[k] = km = mc.fit_kmeans(Ztr, k)
@@ -102,11 +106,10 @@ def main() -> int:
         for c in c_grid:
             clf = mc.fit_cluster_classifiers(Xtr, ytr, km.labels_, c, globals_[c], k=k)
             p_c = clf.predict_proba(Xva, cva)
-            p_glob = globals_[c].predict_proba(Xva)[:, 1]
             fitted[(k, c)] = clf
             rows.append(dict(model="model_c", k=k, c=c, fallback_clusters=int(clf.fallback.sum()), **scores(yva, p_c)))
             rows.append(dict(model="hybrid_avg", k=k, c=c, fallback_clusters=int(clf.fallback.sum()),
-                             **scores(yva, (p_c + p_glob) / 2)))
+                             **scores(yva, (p_c + p_glob_best) / 2)))
         p_topic = mc.topic_only_proba(fitted[(k, c_grid[0])].fake_share, cva, default=ytr.mean())
         rows.append(dict(model="topic_only", k=k, c=np.nan, fallback_clusters=0, **scores(yva, p_topic)))
         print(f"  K = {k}: done")
@@ -158,7 +161,7 @@ def main() -> int:
             "model_c": scores(yva, p_va),
             "global_lr": {"c": float(best_of("global_lr").c), **{m: best_of("global_lr")[m] for m in METRICS}},
             "topic_only": {"k": k, **{m: tuning[(tuning.model == "topic_only") & (tuning.k == k)].iloc[0][m] for m in METRICS}},
-            "hybrid_avg": {"k": k, "c": c, **{m: tuning[(tuning.model == "hybrid_avg") & (tuning.k == k) & (tuning.c == c)].iloc[0][m] for m in METRICS}},
+            "hybrid_avg": {"k": k, "c": c, "global_c": float(c_glob), **{m: tuning[(tuning.model == "hybrid_avg") & (tuning.k == k) & (tuning.c == c)].iloc[0][m] for m in METRICS}},
         },
         "n": {"train": len(train), "val": len(val), "test": len(test)},
         "seconds": {key: round(v, 1) for key, v in timings.items()},

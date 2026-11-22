@@ -48,11 +48,12 @@
     "hybrid_avg": {
       "k": 8,
       "c": 100.0,
-      "roc_auc": 0.9799,
-      "accuracy": 0.933,
+      "global_c": 10.0,
+      "roc_auc": 0.9805,
+      "accuracy": 0.9328,
       "f1": 0.9243,
-      "precision": 0.9277,
-      "recall": 0.921
+      "precision": 0.925,
+      "recall": 0.9236
     }
   },
   "n": {
@@ -62,7 +63,7 @@
   },
   "seconds": {
     "load": 0.6,
-    "features": 9.5,
-    "tuning": 18.2
+    "features": 9.6,
+    "tuning": 18.4
   }
 }
