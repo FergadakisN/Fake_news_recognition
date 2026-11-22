@@ -214,6 +214,43 @@ constant, not a prediction. When blending, join the coverage file on `doc_id`. T
 `covered` is true, or give the blender `covered` (and `top_sim`) as extra features, so it learns to trust Model B
 only where it found neighbours. Fit the blending on val and never on test.
 
+### Topic clusters and Model C (K-means, Person 2)
+
+Model C groups the articles into topics with K-means and trains one logistic regression per topic.
+Walkthrough, figures and the analysis of the topic shortcut: [notebooks/05-kmeans.ipynb](notebooks/05-kmeans.ipynb).
+
+1. TF-IDF of `content`, then TruncatedSVD to 200 dimensions and L2 normalisation (all fitted on train).
+2. K-means on the train SVD vectors (k-means++, 10 restarts).
+3. One logistic regression per cluster on the full TF-IDF features. A cluster with fewer than 200 train articles or
+   only one class falls back to a global logistic regression.
+4. A new article goes to its nearest centroid and is scored by that cluster's classifier.
+
+```bash
+python scripts/run_model_c.py --regime grouped       # ~30 s: compares K in {8, 16, 32} x C in {10, 30, 100} on val
+python scripts/run_model_c.py --regime random        # keeps the K and C chosen on grouped; only the split differs
+```
+
+```python
+from fake_news.models.model_c import ModelC
+model = ModelC(k=8, c=100).fit(train.content, train.is_fake)      # the chosen setting
+prob_fake, cluster = model.predict_proba(val.content), model.assign(val.content)
+```
+
+The setting is chosen on grouped val by Model C's ROC-AUC: **K = 8, C = 100**. Every run also scores a global
+logistic regression on the same features (tuned over the same C values) as the comparison, and a `topic_only`
+reference that predicts the cluster's train fake share.
+
+- `data/processed/predictions/model_c__<regime>.csv`: `doc_id, split, prob_fake` for val and test, the shared format.
+- `data/processed/predictions/model_c__<regime>__clusters.csv`: `doc_id, split, cluster` for every article.
+- `reports/model_c/<regime>_tuning.csv`, `_clusters.csv`, `_summary.json`: every setting on val, a per-cluster table
+  (size, fake share, top words, val ROC-AUC of Model C and the global model), and the chosen setting.
+
+**For Model D: give the blender the cluster id too.** On its own Model C is slightly below a global logistic regression
+(val ROC-AUC 0.976 vs 0.978 on grouped), but the average of the two is above both (+0.0025). A control with random groups
+instead of topics makes things worse, so the gain comes from the topics. The 8 per-cluster classifiers are trained
+separately, so their probabilities may be on slightly different scales; with the `cluster` column (join the clusters file
+on `doc_id`) the blender can correct for that. Fit the blending on val and never on test.
+
 ### Paths and constants
 
 ```python
@@ -322,20 +359,22 @@ Unit tests on small examples, plus checks of your real data against the referenc
 │   ├── interim/        Cleaned data (not in git)
 │   └── processed/      splits.csv, clean_fingerprint.json, near_dup_groups.csv, embeddings/ (in git), predictions/ (not in git)
 ├── models/             Trained and serialized models
-├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh
+├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh, 05-kmeans
 ├── reports/
 │   ├── cleaning/       Cleaning log, DECISIONS.md (in git)
 │   ├── minhash/        Near-duplicate statistics, Model B choice, note on cleaning residue
 │   ├── model_b/        Model B comparison and tuning on val
+│   ├── model_c/        Model C tuning, per-cluster tables and chosen setting
 │   └── figures/        Figures for the report
 ├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings),
-│                       find_near_duplicates.py (groups), run_model_b.py (Model B)
+│                       find_near_duplicates.py (groups), run_model_b.py (Model B),
+│                       run_model_c.py (Model C)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions
 │   ├── data/           load.py, clean.py, markers.py (rules + decisions), split.py, integrity.py
 │   ├── features/       Text preprocessing and feature extraction; embeddings.py (sentence embeddings)
 │   ├── similarity/     MinHash, LSH, near-duplicate groups (from scratch)
-│   ├── models/         Training and prediction; model_b.py (MinHash/LSH k-NN)
+│   ├── models/         Training and prediction; model_b.py (MinHash/LSH k-NN), model_c.py (K-means + per-cluster LR)
 │   └── evaluation/     metrics.py (evaluate), predictions.py (shared prediction files)
 ├── tests/              Unit tests
 ├── pyproject.toml      Package definition for `pip install -e .`
