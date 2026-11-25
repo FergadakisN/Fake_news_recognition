@@ -94,3 +94,104 @@ def test_tune_and_best_setting():
     assert len(grid) == 4 and grid["coverage"].max() == 0.8   # 4 of 5 queries are in the index
     best = lf.best_setting(grid)
     assert best["roc_auc_overall"] == grid["roc_auc_overall"].max()
+
+
+# ---- neighbour features ---------------------------------------------------------------------------------
+
+import pandas as pd  # noqa: E402
+
+STORY = TRAIN[0]
+STORY_COPY = STORY + " and the vote was close"            # near-duplicate of STORY (same group)
+STORY_VAL = STORY.replace("late on tuesday", "on tuesday night")
+
+
+def _toy():
+    """6 articles: a story and its copy in train (one group), two other train articles, two val articles."""
+    df = pd.DataFrame({
+        "doc_id": [10, 11, 12, 13, 20, 21],
+        "content": [STORY, STORY_COPY, TRAIN[1], TRAIN[2], STORY_VAL, UNRELATED],
+        "is_fake": [1, 1, 0, 0, 1, 0],
+    })
+    split = pd.Series(["train", "train", "train", "train", "val", "test"], index=df["doc_id"])
+    groups = pd.Series([10, 10, 12, 13, 20, 21], index=df["doc_id"])  # 10 and 11 are one group
+    return df, split, groups
+
+
+def test_article_is_never_its_own_neighbour():
+    df, split, groups = _toy()
+    enc = lf.encode(df["content"].tolist(), shingle_k=lf.SHINGLE_WORDS)
+    train_rows = np.flatnonzero(split.to_numpy() == "train")
+    index = lf.LSHNeighborIndex().fit(None, df["is_fake"].to_numpy()[train_rows], encoded=enc.take(train_rows))
+    keys = df["doc_id"].to_numpy()
+    nb = index.neighbors(encoded=enc.take(train_rows), query_keys=keys[train_rows], index_keys=keys[train_rows])
+    for query_row, found in enumerate(nb.rows):
+        assert query_row not in found                      # train row i never finds train row i
+    assert 1 in nb.rows[0] and 0 in nb.rows[1]             # but the copy is still found (exclude="self")
+
+
+def test_self_exclusion_keeps_copies_group_exclusion_removes_them():
+    df, split, groups = _toy()
+    by_id = lambda f: f.set_index("doc_id")
+    self_ = by_id(lf.build_lsh_features(df, split, exclude="self"))
+    group = by_id(lf.build_lsh_features(df, split, exclude="group", groups=groups))
+    assert self_.at[10, "neighbor_count"] == 1 and self_.at[10, "max_jaccard"] > 0.5   # finds its copy 11
+    assert group.at[10, "neighbor_count"] == 0 and group.at[11, "neighbor_count"] == 0  # copy is in its group
+    # val/test articles are not affected by the rule (they are never in the index)
+    assert self_.loc[[20, 21]].equals(group.loc[[20, 21]])
+
+
+def test_group_mode_never_returns_a_group_member():
+    df, split, groups = _toy()
+    enc = lf.encode(df["content"].tolist(), shingle_k=lf.SHINGLE_WORDS)
+    train_rows = np.flatnonzero(split.to_numpy() == "train")
+    index = lf.LSHNeighborIndex().fit(None, df["is_fake"].to_numpy()[train_rows], encoded=enc.take(train_rows))
+    g = groups.reindex(df["doc_id"]).to_numpy()[train_rows]
+    nb = index.neighbors(encoded=enc.take(train_rows), query_keys=g, index_keys=g)
+    for query_row, found in enumerate(nb.rows):
+        assert not (g[found] == g[query_row]).any()
+
+
+def test_no_neighbour_gets_fallback_values():
+    df, split, groups = _toy()
+    f = lf.build_lsh_features(df, split, exclude="self").set_index("doc_id")
+    train_rate = df.loc[split.to_numpy() == "train", "is_fake"].mean()      # 0.5 in the toy data
+    assert f.at[21, "neighbor_count"] == 0 and f.at[21, "max_jaccard"] == 0
+    assert f.at[21, "fake_neighbor_share"] == train_rate
+    assert f.at[20, "neighbor_count"] >= 1 and f.at[20, "fake_neighbor_share"] == 1.0   # finds the fake story
+
+
+def test_val_test_features_use_train_labels_only():
+    df, split, groups = _toy()
+    a = lf.build_lsh_features(df, split, exclude="group", groups=groups)
+    flipped = df.assign(is_fake=np.where(split.to_numpy() == "train", df["is_fake"], 1 - df["is_fake"]))
+    b = lf.build_lsh_features(flipped, split, exclude="group", groups=groups)
+    assert a.equals(b)                                      # changing val/test labels changes nothing
+
+
+def test_prefilter_keeps_true_neighbours():
+    df, split, groups = _toy()
+    a = lf.build_lsh_features(df, split, exclude="self", min_agree=0)
+    b = lf.build_lsh_features(df, split, exclude="self", min_agree=lf.MIN_AGREE)
+    assert a.equals(b)
+
+
+def test_exclusion_rule_per_regime_and_bad_rule():
+    assert lf.exclusion_for_regime("random") == "self"
+    assert lf.exclusion_for_regime("grouped") == lf.exclusion_for_regime("cluster") == "group"
+    df, split, _ = _toy()
+    with pytest.raises(ValueError):
+        lf.build_lsh_features(df, split, exclude="group")          # groups missing
+    with pytest.raises(ValueError):
+        lf.build_lsh_features(df, split, exclude="nothing")
+
+
+def test_save_and_load_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(lf, "FEATURES_DIR", tmp_path)
+    df, split, _ = _toy()
+    f = lf.build_lsh_features(df, split, exclude="self")
+    lf.save_lsh_features(f, "random", seed=7)
+    back = lf.load_lsh_features("random", seed=7)
+    assert list(back.columns) == ["doc_id", "split", *lf.FEATURE_COLUMNS]
+    assert np.allclose(back[lf.FEATURE_COLUMNS], f.sort_values("doc_id")[lf.FEATURE_COLUMNS])
+    with pytest.raises(FileNotFoundError):
+        lf.load_lsh_features("grouped", seed=7)
