@@ -78,10 +78,10 @@ class Neighbors:
         return len(self.rows)
 
 
-class MinHashKNN:
+class LSHNeighborIndex:
     """k-NN classifier over shingle sets with an LSH index of the training articles.
 
-    >>> knn = MinHashKNN(bands=32, rows=4).fit(train_texts, train_labels)
+    >>> knn = LSHNeighborIndex(bands=32, rows=4).fit(train_texts, train_labels)
     >>> nb = knn.neighbors(val_texts)
     >>> prob_fake, covered = knn.predict_proba(nb, k=10, min_sim=0.2)
     """
@@ -97,7 +97,7 @@ class MinHashKNN:
 
     # ---- index the training articles --------------------------------------------------------------------
 
-    def fit(self, texts: Sequence[str] | None, labels, encoded: Encoded | None = None) -> "MinHashKNN":
+    def fit(self, texts: Sequence[str] | None, labels, encoded: Encoded | None = None) -> "LSHNeighborIndex":
         """Index the training articles. Pass ``encoded`` (from :func:`encode`) to skip shingling."""
         enc = encoded if encoded is not None else self.encode(texts)
         self.labels_ = np.asarray(labels, dtype=float)
@@ -235,7 +235,7 @@ def score(prob: np.ndarray, covered: np.ndarray, y: np.ndarray) -> dict:
     return out
 
 
-def tune(knn: MinHashKNN, nb: Neighbors, y, ks=K_GRID, min_sims=MIN_SIM_GRID) -> "pd.DataFrame":
+def tune(knn: LSHNeighborIndex, nb: Neighbors, y, ks=K_GRID, min_sims=MIN_SIM_GRID) -> "pd.DataFrame":
     """Score every (k, min_sim) on one set of neighbours (validation). One row per combination."""
     import pandas as pd
 

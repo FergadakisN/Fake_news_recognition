@@ -40,7 +40,7 @@ import pandas as pd
 from fake_news import config
 from fake_news.data import load_dataset
 from fake_news.evaluation import save_predictions
-from fake_news.models import model_b as mb
+from fake_news.similarity import lsh_features as lf
 
 METHODS = {  # name -> (bands, rows, exact search?, words per shingle)
     "lsh_16x8": (16, 8, False, 3),
@@ -88,7 +88,7 @@ def main() -> int:
         """Shingles + signatures of all three partitions, computed once per shingle size."""
         if shingle_k not in encodings:
             t0 = time.perf_counter()
-            encodings[shingle_k] = {name: mb.encode(part["content"].tolist(), shingle_k=shingle_k)
+            encodings[shingle_k] = {name: lf.encode(part["content"].tolist(), shingle_k=shingle_k)
                                     for name, part in (("train", train), ("val", val), ("test", test))}
             print(f"  ({shingle_k}-word shingles + signatures: {time.perf_counter() - t0:.0f} s)")
         return encodings[shingle_k]
@@ -100,16 +100,16 @@ def main() -> int:
             continue
         enc = encoded(shingle_k)
         t0 = time.perf_counter()
-        knn = mb.MinHashKNN(bands, rows, shingle_k=shingle_k).fit(None, train["is_fake"], encoded=enc["train"])
+        knn = lf.LSHNeighborIndex(bands, rows, shingle_k=shingle_k).fit(None, train["is_fake"], encoded=enc["train"])
         fit_s = time.perf_counter() - t0
         nb = knn.neighbors(encoded=enc["val"], exact=exact)
-        grid = mb.tune(knn, nb, val["is_fake"]).assign(method=name)
-        best = mb.best_setting(grid)
+        grid = lf.tune(knn, nb, val["is_fake"]).assign(method=name)
+        best = lf.best_setting(grid)
         best_rows.append({
             "method": name, "shingle_words": shingle_k, "k": int(best["k"]), "min_sim": best["min_sim"],
             **{c: best[c] for c in ("coverage", "coverage_fake", "coverage_real", "f1_covered", "accuracy_covered",
                                     "f1_overall", "accuracy_overall", "roc_auc_overall")},
-            "coverage_at_0.1": grid.loc[grid.min_sim == mb.MIN_SIM_GRID[0], "coverage"].iloc[0],
+            "coverage_at_0.1": grid.loc[grid.min_sim == lf.MIN_SIM_GRID[0], "coverage"].iloc[0],
             "candidates_per_query": nb.n_candidates.mean(),
             "candidates_p90": np.quantile(nb.n_candidates, 0.9),
             "ms_per_query": 1000 * (nb.lookup_seconds + nb.scoring_seconds) / len(nb),
@@ -120,7 +120,7 @@ def main() -> int:
             # the k / min_sim chosen on random val, scored unchanged on this regime's val: effect of the split alone
             prob, covered = knn.predict_proba(nb, int(reference["k"]), float(reference["min_sim"]))
             best_rows.append({**best_rows[-1], "method": "random_setting", "k": int(reference["k"]),
-                              "min_sim": float(reference["min_sim"]), **mb.score(prob, covered, val["is_fake"])})
+                              "min_sim": float(reference["min_sim"]), **lf.score(prob, covered, val["is_fake"])})
             print(f"  random setting (k={reference['k']}, min_sim={reference['min_sim']}) on {regime} val: "
                   f"coverage {best_rows[-1]['coverage']:.3f}  F1 covered {best_rows[-1]['f1_covered']:.3f}  "
                   f"AUC {best_rows[-1]['roc_auc_overall']:.3f}")
@@ -142,7 +142,7 @@ def main() -> int:
     k, min_sim = int(comparison.at[chosen, "k"]), float(comparison.at[chosen, "min_sim"])
     bands, rows, _, shingle_k = METHODS[chosen]
     enc = encoded(shingle_k)
-    knn = mb.MinHashKNN(bands, rows, shingle_k=shingle_k).fit(None, train["is_fake"], encoded=enc["train"])
+    knn = lf.LSHNeighborIndex(bands, rows, shingle_k=shingle_k).fit(None, train["is_fake"], encoded=enc["train"])
     print(f"\nchosen on val: {chosen}, k={k}, min_sim={min_sim}, fallback (train fake rate) {knn.fallback_:.4f}")
 
     preds, coverage, val_metrics = [], [], None
@@ -155,7 +155,7 @@ def main() -> int:
                                       "n_neighbors": n_used,
                                       "top_sim": [float(s[0]) if len(s) else 0.0 for s in nb.sims]}))
         if split == "val":  # test is never scored here
-            val_metrics = mb.score(prob, covered, part["is_fake"])
+            val_metrics = lf.score(prob, covered, part["is_fake"])
     path = save_predictions(pd.concat(preds), model="model_b", regime=regime)
     cov_path = path.with_name(f"model_b__{regime}__coverage.csv")
     pd.concat(coverage).sort_values("doc_id").to_csv(cov_path, index=False)
