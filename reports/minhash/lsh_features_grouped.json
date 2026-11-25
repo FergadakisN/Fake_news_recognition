@@ -1,0 +1,15 @@
+{
+  "regime": "grouped",
+  "seed": null,
+  "split_source": "splits.csv",
+  "exclude": "group",
+  "shingle_words": 2,
+  "bands": 64,
+  "rows": 2,
+  "min_sim": 0.1,
+  "min_agree": 5,
+  "fallback_train_fake_rate": 0.444122,
+  "seconds": 586.7,
+  "ms_per_query": 9.34,
+  "candidates_per_query": 479.2
+}
