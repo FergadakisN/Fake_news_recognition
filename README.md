@@ -172,24 +172,32 @@ Details and figures: [notebooks/03-embeddings.ipynb](notebooks/03-embeddings.ipy
 MinHash and LSH are implemented from scratch in `src/fake_news/similarity/` (NumPy and the standard library only).
 Walkthrough and figures: [notebooks/04-minhash-lsh.ipynb](notebooks/04-minhash-lsh.ipynb).
 
-**Near-duplicate groups** (input for `split_grouped`):
+**Near-duplicate groups** (input for `split_grouped`) have two tiers, merged with union-find:
+
+| Tier | Finds | How | Script |
+|---|---|---|---|
+| MinHash | near-copies (same wording) | 3-word shingles, 128 MinHash values, LSH 16 × 8, exact Jaccard ≥ 0.7 | `find_near_duplicates.py` |
+| Embeddings | paraphrases (same story, other words) | MiniLM vectors, exact top-10 cosine neighbours, cosine ≥ 0.90 | `find_paraphrases.py` |
 
 ```bash
-python scripts/find_near_duplicates.py               # ~1 min (signatures cached in data/interim/)
-python scripts/find_near_duplicates.py --threshold 0.8
+python scripts/find_near_duplicates.py                          # MinHash tier, ~1 min
+python scripts/find_paraphrases.py --threshold 0.90 --write     # embedding tier + merge -> final groups, ~1 min
+python scripts/build_grouped_split.py                           # rebuild split_grouped from the final groups
+python scripts/build_lsh_features.py --regime grouped           # then rebuild the grouped features
 ```
 
-The script finds pairs with 3-word shingles, 128 MinHash values and LSH with 16 bands × 8 rows. Each candidate pair is
-checked with exact Jaccard and kept if J ≥ 0.7. Union-find then joins the kept pairs into groups.
-
-- `data/processed/near_dup_groups.csv` (**in git**): `doc_id, group_id` for every cleaned article. `group_id` is the
-  smallest `doc_id` in the group; an article without near-duplicates has `group_id == doc_id`.
-- `reports/minhash/`: summary statistics, examples around the threshold, a comparison of thresholds, and the largest
-  and mixed-label groups. `NOTE_cleaning_residue.md` lists cleaning residue for Person 1.
+- `data/processed/near_dup_groups.csv` (**in git**): the final groups, `doc_id, group_id, tier` for every cleaned
+  article. `group_id` is the smallest `doc_id` in the group (`group_id == doc_id` for an article without
+  near-duplicates). `tier` says what linked the group: `minhash`, `embedding`, `both` (a MinHash group enlarged or
+  joined by embedding pairs) or `none` (singleton).
+- `data/processed/near_dup_groups_minhash.csv` (**in git**): the MinHash tier alone (`doc_id, group_id`), the input
+  of the merge.
+- `reports/minhash/`: statistics, threshold examples and comparisons for both tiers, the largest and mixed-label
+  groups, and `NOTE_cleaning_residue.md` (cleaning residue for Person 1).
 
 ```python
 from fake_news.similarity.near_duplicates import load_groups
-groups = load_groups()               # pd.Series doc_id -> group_id, ready for make_group_split(clean, groups)
+groups = load_groups()               # pd.Series doc_id -> group_id (final groups), for make_group_split(clean, groups)
 ```
 
 **LSH neighbour features** (input for the final classifier):
@@ -260,7 +268,8 @@ config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, 
 | `data/processed/splits.csv` | **yes** | Shared splits |
 | `data/processed/clean_fingerprint.json` | **yes** | Row counts + hashes of the cleaned data |
 | `data/processed/embeddings/minilm__clean{.npy,__doc_ids.npy,.json}` | **yes** | Sentence embeddings (float16, ~48 MB), their `doc_id`s and metadata |
-| `data/processed/near_dup_groups.csv` | **yes** | Near-duplicate groups: `doc_id, group_id` (MinHash/LSH, J ≥ 0.7) |
+| `data/processed/near_dup_groups.csv` | **yes** | Near-duplicate groups: `doc_id, group_id, tier` (MinHash J ≥ 0.7 + embeddings cosine ≥ 0.90) |
+| `data/processed/near_dup_groups_minhash.csv` | **yes** | MinHash tier of the groups alone: `doc_id, group_id` |
 | `data/processed/features/lsh__<regime>.csv` | **yes** | LSH neighbour features per article (`build_lsh_features.py`) |
 | `data/processed/predictions/<model>__<regime>.csv` | no | `doc_id, split, prob_fake` |
 
@@ -348,7 +357,7 @@ Unit tests on small examples, plus checks of your real data against the referenc
 │   ├── raw/            Original WELFake CSV (not in git)
 │   ├── external/       Third-party data
 │   ├── interim/        Cleaned data (not in git)
-│   └── processed/      splits.csv, clean_fingerprint.json, near_dup_groups.csv, embeddings/ (in git), predictions/ (not in git)
+│   └── processed/      splits.csv, clean_fingerprint.json, near_dup_groups[_minhash].csv, features/, embeddings/ (in git), predictions/ (not in git)
 ├── models/             Trained and serialized models
 ├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh
 ├── reports/
@@ -357,7 +366,8 @@ Unit tests on small examples, plus checks of your real data against the referenc
 │   ├── lsh_features/   Neighbour voting analysis on val (how informative the neighbours are)
 │   └── figures/        Figures for the report
 ├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings),
-│                       find_near_duplicates.py (groups), build_lsh_features.py (LSH features),
+│                       find_near_duplicates.py + find_paraphrases.py (groups), build_grouped_split.py,
+│                       build_lsh_features.py (LSH features),
 │                       run_model_b.py (neighbour voting analysis, not a pipeline model)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions

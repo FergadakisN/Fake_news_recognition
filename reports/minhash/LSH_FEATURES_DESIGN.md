@@ -91,18 +91,22 @@ get the fallback and so count as predicted real.
 
 ## Random vs grouped split (val)
 
-`split_grouped` keeps every near-duplicate group (J ≥ 0.7, `near_dup_groups.csv`) in one partition. The design is
-fixed across regimes (2-word shingles, 64 × 2). Only `k` and `min_sim` were retuned on grouped val, and they came
-out the same (k = 5, min_sim = 0.10). So the differences below come from the split alone. (The two val sets contain
-different articles but have the same class balance, 44.4% fake.)
+`split_grouped` keeps every near-duplicate group in one partition. It was first built from the MinHash groups alone
+(J ≥ 0.7); it now uses the two-tier groups (MinHash + embedding pairs with cosine ≥ 0.90). The retrieval design is
+fixed across regimes (2-word shingles, 64 × 2). Only `k` and `min_sim` were retuned on grouped val, and they came out
+the same every time (k = 5, min_sim = 0.10). So the differences below come from the split alone. (The val sets
+contain different articles but have the same class balance, 44.4% fake.)
 
 | Val set | Coverage | Fake / real coverage | F1 covered | ROC-AUC | F1 overall |
 |---|---|---|---|---|---|
 | random | 18.6% | 16.0% / 20.8% | 0.942 | 0.652 | 0.261 |
-| grouped | 17.4% | 13.1% / 20.8% | 0.918 | 0.639 | 0.211 |
+| grouped, MinHash groups only (earlier) | 17.4% | 13.1% / 20.8% | 0.918 | 0.639 | 0.211 |
+| **grouped, two-tier groups (current)** | 15.9% | 11.6% / 19.3% | 0.902 | 0.625 | 0.187 |
 
-Under the random split, **277 val articles (3.0%) have a near-duplicate in train**: 4.8% of the fake ones and 1.4% of
-the real ones. Under the grouped split there are none, by construction. Removing them costs fake articles almost
-3 points of coverage and leaves real ones unchanged. F1 on covered articles drops by 0.024 and ROC-AUC by 0.013. The
-drop is moderate because cleaning had already removed exact duplicates, and only ~4% of articles are in near-duplicate
-groups at all. Test is not scored.
+Under the random split, **507 val articles (5.4%) have a member of their two-tier group in train** (6.6% of the
+fake ones, 4.5% of the real ones); with the MinHash groups alone it was 277 (3.0%). Under the grouped split there are
+none, by construction. Each step removes neighbours that are copies or paraphrases of the article: coverage drops by
+2.7 points in total, F1 on covered articles by 0.040 and ROC-AUC by 0.027. The embedding tier also lowers real
+coverage (20.8% → 19.3%), because it groups rewritten agency reports, not only re-posted fake stories. The drop
+stays moderate because cleaning had already removed exact duplicates and only 7.2% of articles are in a group.
+Test is not scored.

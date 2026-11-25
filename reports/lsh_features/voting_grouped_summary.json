@@ -11,29 +11,29 @@
   "selection": "max val ROC-AUC over LSH methods",
   "metric_note": "main: coverage, f1_covered, roc_auc_overall; secondary: f1_overall, accuracy_overall",
   "val": {
-    "coverage": 0.1739,
-    "coverage_fake": 0.1309,
-    "coverage_real": 0.2082,
-    "f1_covered": 0.9184,
-    "accuracy_covered": 0.946,
-    "f1_overall": 0.2108,
-    "accuracy_overall": 0.6048,
-    "roc_auc_overall": 0.6389
+    "coverage": 0.159,
+    "coverage_fake": 0.1159,
+    "coverage_real": 0.1934,
+    "f1_covered": 0.9025,
+    "accuracy_covered": 0.937,
+    "f1_overall": 0.1871,
+    "accuracy_overall": 0.5971,
+    "roc_auc_overall": 0.6248
   },
   "n": {
-    "train": 43765,
-    "val": 9380
+    "train": 43767,
+    "val": 9379
   },
   "random_setting_on_val": {
     "k": 5,
     "min_sim": 0.1,
-    "coverage": 0.1739,
-    "coverage_fake": 0.1309,
-    "coverage_real": 0.2082,
-    "f1_covered": 0.9184,
-    "accuracy_covered": 0.946,
-    "f1_overall": 0.2108,
-    "accuracy_overall": 0.6048,
-    "roc_auc_overall": 0.6389
+    "coverage": 0.159,
+    "coverage_fake": 0.1159,
+    "coverage_real": 0.1934,
+    "f1_covered": 0.9025,
+    "accuracy_covered": 0.937,
+    "f1_overall": 0.1871,
+    "accuracy_overall": 0.5971,
+    "roc_auc_overall": 0.6248
   }
 }

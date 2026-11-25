@@ -8,8 +8,8 @@
   "rows": 2,
   "min_sim": 0.1,
   "min_agree": 5,
-  "fallback_train_fake_rate": 0.444122,
-  "seconds": 586.7,
-  "ms_per_query": 9.34,
-  "candidates_per_query": 479.2
+  "fallback_train_fake_rate": 0.444033,
+  "seconds": 584.7,
+  "ms_per_query": 9.3,
+  "candidates_per_query": 475.2
 }

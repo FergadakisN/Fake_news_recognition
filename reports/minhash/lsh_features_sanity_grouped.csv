@@ -1,4 +1,4 @@
 split,n,share_no_neighbor,mean_max_jaccard,median_max_jaccard,mean_max_jaccard_if_any,mean_neighbor_count,share_fake_if_fake,share_fake_if_real,share_fake_if_fake_with_nb,share_fake_if_real_with_nb,with_group_member_in_train
-train,43765,0.8286,0.0396,0.0,0.2312,0.4728,0.5064,0.3616,0.9186,0.0387,1777
-val,9380,0.8261,0.0392,0.0,0.2252,0.4564,0.5047,0.359,0.907,0.0354,0
-test,9380,0.8334,0.0373,0.0,0.2239,0.4217,0.4989,0.3622,0.9066,0.0445,0
+train,43767,0.8408,0.0334,0.0,0.2097,0.4211,0.4992,0.366,0.9135,0.0386,3164
+val,9379,0.841,0.0344,0.0,0.2164,0.4309,0.4968,0.3668,0.8992,0.0446,0
+test,9379,0.8405,0.0334,0.0,0.2091,0.4245,0.5031,0.3674,0.913,0.0326,0
