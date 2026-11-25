@@ -126,8 +126,8 @@ scores = evaluate(val.is_fake, prob_fake)   # prob_fake = your model's P(fake) f
 # {'n', 'accuracy', 'precision', 'recall', 'f1', 'roc_auc', 'tn', 'fp', 'fn', 'tp'}
 
 preds = pd.DataFrame({"doc_id": val.doc_id, "split": "val", "prob_fake": prob_fake})
-save_predictions(preds, model="model_b", regime="random")   # -> data/processed/predictions/model_b__random.csv
-evaluate_predictions(load_predictions("model_b", "random"), split="val")
+save_predictions(preds, model="my_model", regime="random")   # -> data/processed/predictions/my_model__random.csv
+evaluate_predictions(load_predictions("my_model", "random"), split="val")
 ```
 
 `save_predictions` checks the format (columns, no duplicate `doc_id`, probabilities in [0, 1]),
@@ -226,6 +226,15 @@ df = load_dataset("grouped").merge(feats.drop(columns="split"), on="doc_id")
 
 `load_lsh_features` checks that the file was built for the current `split_<regime>` in `splits.csv` and tells you
 to rebuild it otherwise.
+
+**How to use the features in a model:**
+
+- **Never use `fake_neighbor_share` alone.** About 80% of articles have no neighbour and get the constant fallback
+  (≈ 0.444). Only together with `neighbor_count` or `max_jaccard` can the model tell "no evidence" apart from
+  "neighbours split evenly".
+- **Use `log1p(neighbor_count)`** instead of the raw count, which is heavily skewed (mostly 0, a few articles have
+  dozens of neighbours).
+- **Standardize all three features**, with the mean and standard deviation of the training rows only.
 
 **Neighbour voting analysis** (`scripts/run_model_b.py`): **not one of the pipeline's models.** It uses the
 neighbours on their own as a classifier on val, to show how informative they are, and it is how the retrieval

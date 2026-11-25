@@ -29,6 +29,29 @@ project plan changed.)
 | Fallback | train fake rate, 0.4441 |
 | Selection rule | highest val ROC-AUC of the vote among the LSH configurations (ties: F1 on covered, then speed) |
 
+## Choices specific to the features
+
+**No top-k limit: every neighbour with J ≥ 0.10 counts.**
+- In the voting analysis `k` had no effect: ROC-AUC was identical for k = 1…50 (to 3 decimals), because covered
+  articles have few neighbours above 0.10. Limiting k would not change `fake_neighbor_share` for almost any article.
+- A cap would destroy `neighbor_count`, which is only informative if it can grow (with k = 5 it would be 0–5).
+- `min_sim = 0.10` already bounds the neighbours. On random val the mean count is 0.52, the 99th percentile 11 and
+  the maximum 40, so there is no runaway cost.
+
+**Prefilter: `MIN_AGREE = 5` of 128 MinHash positions before the exact Jaccard check.**
+- *Why it is needed:* the features query all 62,525 articles per split, not only val. With 2-word shingles and
+  64 × 2 bands, an article gets ~480 LSH candidates, and on a val sample **only 0.11% of them have J ≥ 0.10**.
+  Almost all the time went into the exact Jaccard of hopeless pairs (~22 ms per article, ~23 min per split).
+- *Why it is safe:* two sets with Jaccard J agree in each MinHash position with probability J, so the number of
+  agreeing positions is Binomial(128, J). A pair at exactly J = 0.10 expects 12.8 agreements, and has a probability
+  below 1% of reaching only 4 or fewer. Pairs above 0.10 are even safer.
+- *Measured:* on a 400-article val sample, keeping candidates with ≥ 5 agreements dropped 62% of the candidates and
+  none of the 200 pairs with J ≥ 0.10. On **all 9,379 random-val articles**, the features with and without the
+  prefilter are **identical** (0 of 4,903 neighbours lost), and queries take 9.4 ms instead of 21.7 ms (2.3× faster).
+- The check is cheap: comparing two 128-value signatures costs far less than intersecting two shingle sets of
+  ~500 elements each. Exact Jaccard is still computed for every candidate that passes.
+- `MIN_AGREE = 0` turns the prefilter off.
+
 ## Comparison of retrieval designs (neighbour vote on val, best `k` / `min_sim` per configuration)
 
 Main metrics are coverage, F1 on covered articles and ROC-AUC. Overall F1 is secondary, because uncovered articles all
