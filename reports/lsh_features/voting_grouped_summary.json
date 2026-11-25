@@ -7,7 +7,7 @@
   "rows": 2,
   "k": 5,
   "min_sim": 0.1,
-  "fallback_prob": 0.444122,
+  "fallback": "train fake rate",
   "selection": "max val ROC-AUC over LSH methods",
   "metric_note": "main: coverage, f1_covered, roc_auc_overall; secondary: f1_overall, accuracy_overall",
   "val": {
@@ -22,8 +22,7 @@
   },
   "n": {
     "train": 43765,
-    "val": 9380,
-    "test": 9380
+    "val": 9380
   },
   "random_setting_on_val": {
     "k": 5,

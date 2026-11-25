@@ -1,14 +1,21 @@
-# Model B: final configuration (chosen on val, random split)
+# LSH neighbour features: retrieval design (chosen on val, random split)
 
-**Model B** classifies an article from the labels of its most similar training articles. Similarity is the Jaccard
-similarity of word shingles. Candidates come from a train-only MinHash/LSH index (128 hashes, `config.SEED`) and are
-scored with exact Jaccard.
+The final classifier gets three **LSH neighbour features** per article: the similarity-weighted share of fake
+labels among its similar training articles, the highest Jaccard similarity, and the number of such neighbours
+(`fake_news.similarity.lsh_features`, built by `scripts/build_lsh_features.py`). Similarity is the Jaccard
+similarity of word shingles. Candidates come from a train-only MinHash/LSH index (128 hashes, `config.SEED`) and
+are scored with exact Jaccard.
 
-- **Score:** the similarity-weighted share of fake labels among the top `k` neighbours with similarity ≥ `min_sim`.
+The retrieval design (shingle size, banding) was chosen with the **neighbour voting analysis**
+(`scripts/run_model_b.py`, an analysis tool, not a pipeline model). It uses the neighbours on their own as a
+classifier:
+
+- **Vote:** the similarity-weighted share of fake labels among the top `k` neighbours with similarity ≥ `min_sim`.
 - **No neighbour:** the article is *uncovered* and gets the training fake rate (0.444, computed from train in code).
 
-Everything below is on **val**. Test predictions are saved but have not been scored.
-Run: `python scripts/run_model_b.py`. Results: `reports/model_b/random_*.csv|json`.
+Everything below is on **val**. No test article was scored.
+Results: `reports/lsh_features/voting_<regime>_*.csv|json`. (This analysis was called "Model B" before the
+project plan changed.)
 
 ## Decision
 
@@ -16,12 +23,13 @@ Run: `python scripts/run_model_b.py`. Results: `reports/model_b/random_*.csv|jso
 |---|---|
 | Shingles | **2 words** (the near-duplicate groups keep 3 words) |
 | LSH banding | **64 bands × 2 rows** |
-| `k` | **5** (k has no effect on val, see below) |
-| `min_sim` | **0.10** |
+| `min_sim` | **0.10** (the features use every neighbour with J ≥ 0.10) |
+| `k` | no limit in the features; in the vote, k = 5 (k has no effect on val, see below) |
+| Prefilter | candidates must agree in ≥ 5 of 128 MinHash positions before the exact check (added later for speed: identical features on all 9,379 random-val articles, 2.3× faster) |
 | Fallback | train fake rate, 0.4441 |
-| Selection rule | highest val ROC-AUC among the LSH configurations (ties: F1 on covered, then speed) |
+| Selection rule | highest val ROC-AUC of the vote among the LSH configurations (ties: F1 on covered, then speed) |
 
-## Comparison (val, best `k` / `min_sim` per configuration)
+## Comparison of retrieval designs (neighbour vote on val, best `k` / `min_sim` per configuration)
 
 Main metrics are coverage, F1 on covered articles and ROC-AUC. Overall F1 is secondary, because uncovered articles all
 get the fallback and so count as predicted real.

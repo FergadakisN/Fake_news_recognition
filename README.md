@@ -167,7 +167,7 @@ X = embeddings_for(train.doc_id)     # (n, 384) float32, row i belongs to train.
 
 Details and figures: [notebooks/03-embeddings.ipynb](notebooks/03-embeddings.ipynb).
 
-### Near-duplicates and Model B (MinHash/LSH)
+### Near-duplicates and LSH neighbour features (MinHash/LSH)
 
 MinHash and LSH are implemented from scratch in `src/fake_news/similarity/` (NumPy and the standard library only).
 Walkthrough and figures: [notebooks/04-minhash-lsh.ipynb](notebooks/04-minhash-lsh.ipynb).
@@ -192,27 +192,45 @@ from fake_news.similarity.near_duplicates import load_groups
 groups = load_groups()               # pd.Series doc_id -> group_id, ready for make_group_split(clean, groups)
 ```
 
-**Model B** (k-NN over shingle sets, retrieved with a train-only LSH index):
+**LSH neighbour features** (input for the final classifier):
 
 ```bash
-python scripts/run_model_b.py                        # regime "random", ~10 min
-python scripts/run_model_b.py --regime grouped       # same design; only k and min_sim retuned
+python scripts/build_lsh_features.py --regime random grouped     # ~10 min per regime
+python scripts/build_lsh_features.py --regime grouped --seed 1 2  # splits generated in code (nothing written to splits.csv)
 ```
 
-The script compares retrieval settings on val, tunes `k` and `min_sim` on val, and picks the setting with the highest
-val ROC-AUC. On the random split it chose 2-word shingles with 64 × 2 bands
-([reasons](reports/minhash/MODEL_B_CHOICE.md)). Other regimes keep that design and retune only `k` and `min_sim`
-on their own val (`--design fixed`), so regimes differ only in the split. Test articles are predicted but never scored.
+For every article in train, val and test, a train-only LSH index (2-word shingles, 64 × 2 bands, exact Jaccard
+≥ 0.1) finds similar training articles and gives three features:
 
-- `data/processed/predictions/model_b__<regime>.csv`: `doc_id, split, prob_fake` for val and test, the shared format.
-- `data/processed/predictions/model_b__<regime>__coverage.csv`: `doc_id, split, covered, n_neighbors, top_sim`.
-- `reports/model_b/<regime>_*.csv|json`: the comparison on val, every tuning row, and the chosen setting.
+| Feature | Meaning | Without neighbours |
+|---|---|---|
+| `fake_neighbor_share` | similarity-weighted share of fake neighbours | training fake rate (≈ 0.444) |
+| `max_jaccard` | similarity of the closest neighbour | 0 |
+| `neighbor_count` | number of neighbours with J ≥ 0.1 | 0 |
 
-**For Model D: use the coverage file.** Model B only has evidence for *covered* articles (about 19% of val). An
-uncovered article (`covered == False`) gets the training fake rate (≈ 0.444) as `prob_fake`, which is a
-constant, not a prediction. When blending, join the coverage file on `doc_id`. Then either use Model B only where
-`covered` is true, or give the blender `covered` (and `top_sim`) as extra features, so it learns to trust Model B
-only where it found neighbours. Fit the blending on val and never on test.
+**Exclusion rule.** Training articles are in the index themselves, so a training article never counts itself as a
+neighbour (random split). In the grouped and cluster splits it also ignores its whole near-duplicate group, because a
+val/test article never has a group member in train there. This keeps train features comparable to val/test
+features. Val/test features use training labels only.
+
+- `data/processed/features/lsh__<regime>.csv` (**in git**, ~2 MB each): `doc_id, split` and the three features.
+  Files for generated splits (`lsh__<regime>__seed<N>.csv`) are not in git; rebuild them with the command above.
+- `reports/minhash/lsh_features_sanity_<regime>.csv`: per partition, the share without neighbours, `max_jaccard`
+  and `fake_neighbor_share` for fake vs real articles (train and val should look alike).
+
+```python
+from fake_news.similarity.lsh_features import load_lsh_features, FEATURE_COLUMNS
+feats = load_lsh_features("grouped")      # doc_id, split, fake_neighbor_share, max_jaccard, neighbor_count
+df = load_dataset("grouped").merge(feats.drop(columns="split"), on="doc_id")
+```
+
+`load_lsh_features` checks that the file was built for the current `split_<regime>` in `splits.csv` and tells you
+to rebuild it otherwise.
+
+**Neighbour voting analysis** (`scripts/run_model_b.py`): **not one of the pipeline's models.** It uses the
+neighbours on their own as a classifier on val, to show how informative they are, and it is how the retrieval
+design above was chosen ([reasons](reports/minhash/LSH_FEATURES_DESIGN.md)). It only uses val, writes no
+predictions, and saves its tables to `reports/lsh_features/voting_<regime>_*`.
 
 ### Paths and constants
 
@@ -234,6 +252,7 @@ config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, 
 | `data/processed/clean_fingerprint.json` | **yes** | Row counts + hashes of the cleaned data |
 | `data/processed/embeddings/minilm__clean{.npy,__doc_ids.npy,.json}` | **yes** | Sentence embeddings (float16, ~48 MB), their `doc_id`s and metadata |
 | `data/processed/near_dup_groups.csv` | **yes** | Near-duplicate groups: `doc_id, group_id` (MinHash/LSH, J ≥ 0.7) |
+| `data/processed/features/lsh__<regime>.csv` | **yes** | LSH neighbour features per article (`build_lsh_features.py`) |
 | `data/processed/predictions/<model>__<regime>.csv` | no | `doc_id, split, prob_fake` |
 
 ### What cleaning does
@@ -325,17 +344,18 @@ Unit tests on small examples, plus checks of your real data against the referenc
 ├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh
 ├── reports/
 │   ├── cleaning/       Cleaning log, DECISIONS.md (in git)
-│   ├── minhash/        Near-duplicate statistics, Model B choice, note on cleaning residue
-│   ├── model_b/        Model B comparison and tuning on val
+│   ├── minhash/        Near-duplicate statistics, LSH feature design and sanity checks, note on cleaning residue
+│   ├── lsh_features/   Neighbour voting analysis on val (how informative the neighbours are)
 │   └── figures/        Figures for the report
 ├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings),
-│                       find_near_duplicates.py (groups), run_model_b.py (Model B)
+│                       find_near_duplicates.py (groups), build_lsh_features.py (LSH features),
+│                       run_model_b.py (neighbour voting analysis, not a pipeline model)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions
 │   ├── data/           load.py, clean.py, markers.py (rules + decisions), split.py, integrity.py
 │   ├── features/       Text preprocessing and feature extraction; embeddings.py (sentence embeddings)
-│   ├── similarity/     MinHash, LSH, near-duplicate groups (from scratch)
-│   ├── models/         Training and prediction; model_b.py (MinHash/LSH k-NN)
+│   ├── similarity/     MinHash, LSH, near-duplicate groups, LSH neighbour features (from scratch)
+│   ├── models/         Training and prediction
 │   └── evaluation/     metrics.py (evaluate), predictions.py (shared prediction files)
 ├── tests/              Unit tests
 ├── pyproject.toml      Package definition for `pip install -e .`
