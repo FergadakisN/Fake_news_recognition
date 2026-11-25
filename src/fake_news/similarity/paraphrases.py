@@ -145,3 +145,40 @@ def add_pair_info(pairs: pd.DataFrame, df: pd.DataFrame, minhash_groups: pd.Seri
         out[f"n_words_{col}"] = d["n_words"].loc[out[src]].to_numpy()
     out["mixed_labels"] = out["is_fake_a"] != out["is_fake_b"]
     return out
+
+
+TIERS = ("none", "minhash", "embedding", "both")
+
+
+def two_tier_groups(doc_ids, minhash_groups: pd.Series, pairs: pd.DataFrame) -> pd.DataFrame:
+    """Final groups with the tier(s) that linked each one: ``doc_id, group_id, tier``.
+
+    ``tier`` describes the whole group (the same for all its members):
+
+    - ``"none"``: a singleton (no near-duplicate);
+    - ``"minhash"``: exactly one MinHash group, not changed by the embedding pairs;
+    - ``"embedding"``: linked only by embedding pairs (paraphrases MinHash did not see);
+    - ``"both"``: one or more MinHash groups enlarged or joined by embedding pairs.
+    """
+    merged = merge_groups(doc_ids, minhash_groups, pairs)
+    mh = minhash_groups.reindex(merged.index)
+    mh_size = mh.map(mh.value_counts())
+    d = pd.DataFrame({"group_id": merged, "mh": mh, "in_mh_group": mh_size >= 2})
+    per = d.groupby("group_id").agg(size=("mh", "size"),
+                                    n_mh_groups=("mh", lambda s: s[d.loc[s.index, "in_mh_group"]].nunique()),
+                                    n_in_mh=("in_mh_group", "sum"))
+    tier = np.select([per["size"] == 1, per["n_mh_groups"] == 0,
+                      (per["n_mh_groups"] == 1) & (per["n_in_mh"] == per["size"])],
+                     ["none", "embedding", "minhash"], default="both")
+    out = merged.to_frame()
+    out["tier"] = out["group_id"].map(pd.Series(tier, index=per.index))
+    return out.reset_index()
+
+
+def save_two_tier_groups(groups: pd.DataFrame, path=None) -> "Path":
+    """Write ``doc_id, group_id, tier`` to data/processed/near_dup_groups.csv (the final groups)."""
+    from fake_news.similarity.near_duplicates import GROUPS_CSV
+
+    path = path or GROUPS_CSV
+    groups[["doc_id", "group_id", "tier"]].sort_values("doc_id").to_csv(path, index=False)
+    return path

@@ -27,7 +27,8 @@ from fake_news.similarity.shingles import K, shingle_ids, words
 
 MIN_SHINGLES = 5
 SIGNATURES_CACHE = config.INTERIM_DIR / "minhash_signatures.npz"  # not in git (data/interim/)
-GROUPS_CSV = config.PROCESSED_DIR / "near_dup_groups.csv"          # in git
+GROUPS_CSV = config.PROCESSED_DIR / "near_dup_groups.csv"          # final two-tier groups (in git)
+MINHASH_GROUPS_CSV = config.PROCESSED_DIR / "near_dup_groups_minhash.csv"  # MinHash tier only (in git)
 REPORT_DIR = config.PROJECT_ROOT / "reports" / "minhash"
 
 
@@ -176,8 +177,16 @@ def save_groups(groups: pd.Series, path: Path = GROUPS_CSV) -> Path:
 
 
 def load_groups(path: Path = GROUPS_CSV) -> pd.Series:
-    """``doc_id -> group_id`` as written by :func:`save_groups`."""
+    """``doc_id -> group_id`` of the final near-duplicate groups (MinHash + embedding tier).
+
+    This is what ``split_grouped`` and the LSH features use. (The file also has a ``tier`` column.)
+    """
     return pd.read_csv(path).set_index("doc_id")["group_id"]
+
+
+def load_minhash_groups() -> pd.Series:
+    """``doc_id -> group_id`` of the MinHash tier only (3-word shingles, J >= 0.7), the input of the merge."""
+    return load_groups(MINHASH_GROUPS_CSV)
 
 
 # ---------------------------------------------------------------------------------------------------------

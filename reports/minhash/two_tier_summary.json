@@ -1,0 +1,41 @@
+{
+  "threshold_cosine": 0.9,
+  "minhash_threshold_jaccard": 0.7,
+  "top_k": 10,
+  "embedding_pairs": 3271,
+  "embedding_pairs_new_links": 1583,
+  "minhash_tier_alone": {
+    "groups_2plus": 1002,
+    "articles": 2445,
+    "largest_group": 40,
+    "mixed_label_groups": 13
+  },
+  "final": {
+    "groups_2plus": 1827,
+    "articles": 4500,
+    "share_of_all_articles": 0.072,
+    "largest_group": 40,
+    "mixed_label_groups": 80,
+    "articles_in_mixed_groups": 204
+  },
+  "by_tier": {
+    "both": {
+      "groups": 91,
+      "articles": 415,
+      "mixed": 5
+    },
+    "embedding": {
+      "groups": 837,
+      "articles": 1924,
+      "mixed": 65
+    },
+    "minhash": {
+      "groups": 899,
+      "articles": 2161,
+      "mixed": 10
+    }
+  },
+  "minhash_groups_enlarged_or_joined": 103,
+  "embedding_links_low_jaccard_truncated": 342,
+  "embedding_links_low_jaccard_similar_length": 781
+}
