@@ -4,8 +4,8 @@
   "k": 8,
   "c": 100.0,
   "n_components": 200,
-  "explained_variance": 0.1542,
-  "tfidf_words": 48130,
+  "explained_variance": 0.1546,
+  "tfidf_words": 47937,
   "min_cluster_size": 200,
   "fallback_clusters": 0,
   "selection": "max val ROC-AUC of model_c over the K x C grid",
@@ -23,47 +23,47 @@
   },
   "val": {
     "model_c": {
-      "roc_auc": 0.9758,
-      "accuracy": 0.9229,
-      "f1": 0.9129,
-      "precision": 0.9159,
-      "recall": 0.9099
+      "roc_auc": 0.977,
+      "accuracy": 0.9233,
+      "f1": 0.9136,
+      "precision": 0.9142,
+      "recall": 0.9131
     },
     "global_lr": {
       "c": 10.0,
-      "roc_auc": 0.978,
-      "accuracy": 0.9288,
-      "f1": 0.9196,
-      "precision": 0.9218,
-      "recall": 0.9174
+      "roc_auc": 0.9794,
+      "accuracy": 0.9293,
+      "f1": 0.9204,
+      "precision": 0.9203,
+      "recall": 0.9205
     },
     "topic_only": {
       "k": 8,
-      "roc_auc": 0.7623,
-      "accuracy": 0.6913,
-      "f1": 0.6312,
-      "precision": 0.6719,
-      "recall": 0.5951
+      "roc_auc": 0.7543,
+      "accuracy": 0.6884,
+      "f1": 0.5535,
+      "precision": 0.7607,
+      "recall": 0.4351
     },
     "hybrid_avg": {
       "k": 8,
       "c": 100.0,
       "global_c": 10.0,
-      "roc_auc": 0.9805,
-      "accuracy": 0.9328,
-      "f1": 0.9243,
-      "precision": 0.925,
-      "recall": 0.9236
+      "roc_auc": 0.9817,
+      "accuracy": 0.9348,
+      "f1": 0.9265,
+      "precision": 0.9274,
+      "recall": 0.9256
     }
   },
   "n": {
-    "train": 43765,
+    "train": 43766,
     "val": 9380,
-    "test": 9380
+    "test": 9379
   },
   "seconds": {
-    "load": 0.6,
-    "features": 9.6,
-    "tuning": 18.4
+    "load": 0.5,
+    "features": 9.5,
+    "tuning": 16.7
   }
 }
