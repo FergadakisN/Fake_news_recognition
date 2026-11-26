@@ -1,0 +1,7 @@
+regime,source,threshold,val_articles,share_of_val,fake,share_of_fake_val,real,share_of_real_val
+grouped,exact search,0.3,250,0.0267,135,0.0324,115,0.0221
+grouped,exact search,0.5,93,0.0099,49,0.0118,44,0.0084
+grouped,LSH features,0.3,250,0.0267,135,0.0324,115,0.0221
+grouped,LSH features,0.5,93,0.0099,49,0.0118,44,0.0084
+random,LSH features,0.3,564,0.0601,365,0.0876,199,0.0382
+random,LSH features,0.5,400,0.0426,284,0.0682,116,0.0223

@@ -126,8 +126,8 @@ scores = evaluate(val.is_fake, prob_fake)   # prob_fake = your model's P(fake) f
 # {'n', 'accuracy', 'precision', 'recall', 'f1', 'roc_auc', 'tn', 'fp', 'fn', 'tp'}
 
 preds = pd.DataFrame({"doc_id": val.doc_id, "split": "val", "prob_fake": prob_fake})
-save_predictions(preds, model="model_b", regime="random")   # -> data/processed/predictions/model_b__random.csv
-evaluate_predictions(load_predictions("model_b", "random"), split="val")
+save_predictions(preds, model="my_model", regime="random")   # -> data/processed/predictions/my_model__random.csv
+evaluate_predictions(load_predictions("my_model", "random"), split="val")
 ```
 
 `save_predictions` checks the format (columns, no duplicate `doc_id`, probabilities in [0, 1]),
@@ -167,6 +167,95 @@ X = embeddings_for(train.doc_id)     # (n, 384) float32, row i belongs to train.
 
 Details and figures: [notebooks/03-embeddings.ipynb](notebooks/03-embeddings.ipynb).
 
+### Near-duplicates and LSH neighbour features (MinHash/LSH)
+
+MinHash and LSH are implemented from scratch in `src/fake_news/similarity/` (NumPy and the standard library only).
+Walkthrough and figures: [notebooks/04-minhash-lsh.ipynb](notebooks/04-minhash-lsh.ipynb).
+
+**Near-duplicate groups** (input for `split_grouped`) have two tiers, merged with union-find:
+
+| Tier | Finds | How | Script |
+|---|---|---|---|
+| MinHash | near-copies (same wording) | 3-word shingles, 128 MinHash values, LSH 16 × 8, exact Jaccard ≥ 0.7 | `find_near_duplicates.py` |
+| Embeddings | paraphrases and copies MinHash misses (e.g. truncated copies) | MiniLM vectors, exact top-10 cosine neighbours: cosine ≥ 0.92, or 0.90–0.92 with 3-word containment ≥ 0.7 | `find_paraphrases.py` |
+
+```bash
+python scripts/find_near_duplicates.py                          # MinHash tier, ~1 min
+python scripts/find_paraphrases.py --write                      # embedding tier + merge -> final groups, ~1 min
+python scripts/build_grouped_split.py                           # rebuild split_grouped from the final groups
+python scripts/build_lsh_features.py --regime grouped           # then rebuild the grouped features
+```
+
+- `data/processed/near_dup_groups.csv` (**in git**): the final groups, `doc_id, group_id, tier` for every cleaned
+  article. `group_id` is the smallest `doc_id` in the group (`group_id == doc_id` for an article without
+  near-duplicates). `tier` says what linked the group: `minhash`, `embedding`, `both` (a MinHash group enlarged or
+  joined by embedding links) or `none` (singleton); `+containment` is appended (`embedding+containment`,
+  `both+containment`) when a link from the containment rule changed the group. Why these rules:
+  [LSH_FEATURES_DESIGN.md](reports/minhash/LSH_FEATURES_DESIGN.md).
+- `data/processed/near_dup_groups_minhash.csv` (**in git**): the MinHash tier alone (`doc_id, group_id`), the input
+  of the merge.
+- `reports/minhash/`: statistics, threshold examples and comparisons for both tiers, the largest and mixed-label
+  groups, and `NOTE_cleaning_residue.md` (cleaning residue for Person 1).
+
+```python
+from fake_news.similarity.near_duplicates import load_groups
+groups = load_groups()               # pd.Series doc_id -> group_id (final groups), for make_group_split(clean, groups)
+```
+
+**LSH neighbour features** (input for the final classifier):
+
+```bash
+python scripts/build_lsh_features.py --regime random grouped     # ~10 min per regime
+python scripts/build_lsh_features.py --regime grouped --seed 1 2  # splits generated in code (nothing written to splits.csv)
+```
+
+For every article in train, val and test, a train-only LSH index (2-word shingles, 64 × 2 bands, exact Jaccard
+≥ 0.1) finds similar training articles and gives three features:
+
+| Feature | Meaning | Without neighbours |
+|---|---|---|
+| `fake_neighbor_share` | similarity-weighted share of fake neighbours | training fake rate (≈ 0.444) |
+| `max_jaccard` | similarity of the closest neighbour | 0 |
+| `neighbor_count` | number of neighbours with J ≥ 0.1 | 0 |
+
+**Exclusion rule.** Training articles are in the index themselves, so a training article never counts itself as a
+neighbour (random split). In the grouped and cluster splits it also ignores its whole near-duplicate group, because a
+val/test article never has a group member in train there. This keeps train features comparable to val/test
+features. Val/test features use training labels only.
+
+- `data/processed/features/lsh__<regime>.csv` (**in git**, ~2 MB each): `doc_id, split` and the three features.
+  Files for generated splits (`lsh__<regime>__seed<N>.csv`) are not in git; rebuild them with the command above.
+- `reports/minhash/lsh_features_sanity_<regime>.csv`: per partition, the share without neighbours, `max_jaccard`
+  and `fake_neighbor_share` for fake vs real articles (train and val should look alike).
+
+```python
+from fake_news.similarity.lsh_features import load_lsh_features, FEATURE_COLUMNS
+feats = load_lsh_features("grouped")      # doc_id, split, fake_neighbor_share, max_jaccard, neighbor_count
+df = load_dataset("grouped").merge(feats.drop(columns="split"), on="doc_id")
+```
+
+`load_lsh_features` checks that the file was built for the current `split_<regime>` in `splits.csv` and tells you
+to rebuild it otherwise.
+
+**How to use the features in a model:**
+
+- **Never use `fake_neighbor_share` alone.** About 80% of articles have no neighbour and get the constant fallback
+  (≈ 0.444). Only together with `neighbor_count` or `max_jaccard` can the model tell "no evidence" apart from
+  "neighbours split evenly".
+- **Use `log1p(neighbor_count)`** instead of the raw count, which is heavily skewed (mostly 0, a few articles have
+  dozens of neighbours).
+- **Standardize all three features**, with the mean and standard deviation of the training rows only.
+
+**Neighbour voting analysis** (`scripts/run_model_b.py`): **not one of the pipeline's models.** It uses the
+neighbours on their own as a classifier on val, to show how informative they are, and it is how the retrieval
+design above was chosen ([reasons](reports/minhash/LSH_FEATURES_DESIGN.md)). It only uses val, writes no
+predictions, and saves its tables to `reports/lsh_features/voting_<regime>_*`.
+
+**Evaluation** (`scripts/evaluate_lsh.py`, ~35 min the first time, then cached): LSH against exact Jaccard (recall,
+false positives, S-curves, runtime) on a 3,000-article sample and on the full data, the feature index against exact
+search, and a leakage audit of `split_grouped` on val. Tables in `reports/minhash/lsh_eval_*` and `leakage_audit_*`;
+all parameters, key numbers and limitations in [REPORT_NOTES.md](reports/minhash/REPORT_NOTES.md).
+
 ### Paths and constants
 
 ```python
@@ -186,6 +275,9 @@ config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, 
 | `data/processed/splits.csv` | **yes** | Shared splits |
 | `data/processed/clean_fingerprint.json` | **yes** | Row counts + hashes of the cleaned data |
 | `data/processed/embeddings/minilm__clean{.npy,__doc_ids.npy,.json}` | **yes** | Sentence embeddings (float16, ~48 MB), their `doc_id`s and metadata |
+| `data/processed/near_dup_groups.csv` | **yes** | Near-duplicate groups: `doc_id, group_id, tier` (MinHash J ≥ 0.7 + embeddings cosine ≥ 0.92 / containment rule) |
+| `data/processed/near_dup_groups_minhash.csv` | **yes** | MinHash tier of the groups alone: `doc_id, group_id` |
+| `data/processed/features/lsh__<regime>.csv` | **yes** | LSH neighbour features per article (`build_lsh_features.py`) |
 | `data/processed/predictions/<model>__<regime>.csv` | no | `doc_id, split, prob_fake` |
 
 ### What cleaning does
@@ -272,17 +364,25 @@ Unit tests on small examples, plus checks of your real data against the referenc
 │   ├── raw/            Original WELFake CSV (not in git)
 │   ├── external/       Third-party data
 │   ├── interim/        Cleaned data (not in git)
-│   └── processed/      splits.csv, clean_fingerprint.json, embeddings/ (in git), predictions/ (not in git)
+│   └── processed/      splits.csv, clean_fingerprint.json, near_dup_groups[_minhash].csv, features/, embeddings/ (in git), predictions/ (not in git)
 ├── models/             Trained and serialized models
-├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings
+├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh
 ├── reports/
 │   ├── cleaning/       Cleaning log, DECISIONS.md (in git)
+│   ├── minhash/        Near-duplicate statistics, LSH feature design and sanity checks, LSH evaluation,
+│   │                   REPORT_NOTES.md, note on cleaning residue
+│   ├── lsh_features/   Neighbour voting analysis on val (how informative the neighbours are)
 │   └── figures/        Figures for the report
-├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings)
+├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings),
+│                       find_near_duplicates.py + find_paraphrases.py (groups), build_grouped_split.py,
+│                       build_lsh_features.py (LSH features),
+│                       run_model_b.py (neighbour voting analysis, not a pipeline model),
+│                       evaluate_lsh.py (LSH vs exact Jaccard, leakage audit)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions
 │   ├── data/           load.py, clean.py, markers.py (rules + decisions), split.py, integrity.py
 │   ├── features/       Text preprocessing and feature extraction; embeddings.py (sentence embeddings)
+│   ├── similarity/     MinHash, LSH, near-duplicate groups, LSH neighbour features (from scratch)
 │   ├── models/         Training and prediction
 │   └── evaluation/     metrics.py (evaluate), predictions.py (shared prediction files)
 ├── tests/              Unit tests

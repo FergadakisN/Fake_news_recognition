@@ -1,0 +1,79 @@
+{
+  "settings": {
+    "sample_size": 3000,
+    "seed": 42,
+    "n_hashes": 128,
+    "bandings_3word": [
+      "16x8",
+      "32x4",
+      "64x2"
+    ],
+    "feature_index": "64x2, 2-word, min_sim 0.1, prefilter 5/128",
+    "min_shingles": 5,
+    "full_min_j": 0.2
+  },
+  "sample": {
+    "articles": 3000,
+    "too_short": 0,
+    "pairs": 4498500,
+    "pairs_by_jaccard": {
+      "<0.1": 4498454,
+      "0.1-0.2": 16,
+      "0.2-0.3": 7,
+      "0.3-0.5": 3,
+      "0.5-0.7": 14,
+      ">=0.7": 6
+    },
+    "shingling_s": 1.15,
+    "naive_us_per_pair": 37.46
+  },
+  "sample_2word": {
+    "pairs_j_ge_0.1": 75,
+    "candidate_pairs": 50998
+  },
+  "full": {
+    "articles": 62446,
+    "too_short": 79,
+    "pairs": 1949720235,
+    "pairs_j_ge_0.2": 10691,
+    "shingling_s": 23.6,
+    "exact_search_s": 182.1,
+    "naive_us_per_pair": 40.7,
+    "missed_by_16x8_at_0.7": {
+      "pairs": 118,
+      "same_minhash_group": 43,
+      "same_final_group": 78,
+      "across_split_grouped": 21
+    }
+  },
+  "leakage": {
+    "grouped_exact": {
+      "ge_0.3": 250,
+      "ge_0.5": 93
+    },
+    "grouped_lsh": {
+      "ge_0.3": 250,
+      "ge_0.5": 93
+    },
+    "random_lsh": {
+      "ge_0.3": 564,
+      "ge_0.5": 400
+    },
+    "val_articles": 9380,
+    "val_lsh_ms_per_article": 9.29,
+    "val_exact_ms_per_article": 7.34,
+    "leak_pairs_ge_0.5": {
+      "n": 93,
+      "same_label": 0.956989247311828,
+      "containment3_ge_0.7": 0.9139784946236559,
+      "median_jaccard_3w": 0.5926,
+      "median_cosine": 0.6776000261306763,
+      "by_kind": {
+        "shared template text (cosine < 0.8)": 40,
+        "short text (< 50 words)": 31,
+        "same story (cosine >= 0.8)": 22
+      }
+    }
+  },
+  "seconds": 236.7
+}

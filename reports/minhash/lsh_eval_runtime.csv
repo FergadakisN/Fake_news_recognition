@@ -1,0 +1,11 @@
+data,method,articles,signatures_s,banding_s,verify_s,total_s,pairs_checked
+sample,LSH 16x8,3000,1.353,0.04,0.0,1.394,7
+sample,LSH 32x4,3000,1.353,0.059,0.0,1.413,19
+sample,LSH 64x2,3000,1.353,0.144,0.014,1.512,437
+sample,"brute force, posting lists (measured)",3000,,,,1.878,4498500
+sample,"brute force, pair by pair (extrapolated)",3000,,,,168.506,4498500
+full,LSH 16x8,62446,25.616,1.172,0.257,27.045,3954
+full,LSH 32x4,62446,25.616,2.617,0.351,28.583,7621
+full,LSH 64x2,62446,25.616,6.475,6.921,39.011,184352
+full,"brute force, posting lists (measured)",62446,,,,182.08,1949720235
+full,"brute force, pair by pair (extrapolated)",62446,,,,79353.471,1949720235
