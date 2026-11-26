@@ -1,4 +1,4 @@
-"""Find near-duplicate articles with MinHash + LSH and write data/processed/near_dup_groups.csv.
+"""MinHash tier of the near-duplicate groups: find near-copies with MinHash + LSH, write near_dup_groups_minhash.csv.
 
     python scripts/find_near_duplicates.py                    # proposed threshold (0.7)
     python scripts/find_near_duplicates.py --threshold 0.8    # another threshold
@@ -13,7 +13,9 @@ Stages (each one timed):
     6. groups    pairs with Jaccard >= threshold -> union-find -> doc_id -> group_id
 
 Outputs:
-    data/processed/near_dup_groups.csv          doc_id, group_id (all articles; singletons: group_id = doc_id)
+    data/processed/near_dup_groups_minhash.csv  doc_id, group_id (all articles; singletons: group_id = doc_id)
+                                                (merged with the embedding tier by scripts/find_paraphrases.py
+                                                into the final data/processed/near_dup_groups.csv)
     reports/figures/minhash_candidate_jaccard.png
     reports/minhash/near_dup_summary.json       settings, timings, statistics
     reports/minhash/threshold_examples.csv      10 pairs just above and 10 just below 0.8
@@ -117,7 +119,7 @@ def main() -> int:
         groups = nd.make_groups(df["doc_id"], cands, th)
         summary = nd.group_summary(groups, labels)
         gt = nd.group_table(groups, labels)
-        path = nd.save_groups(groups)
+        path = nd.save_groups(groups, nd.MINHASH_GROUPS_CSV)
 
     print(f"\nThreshold {th}:")
     print(f"  groups with 2+ articles : {summary['groups_2plus']:,}")

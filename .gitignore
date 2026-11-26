@@ -16,6 +16,10 @@ data/**/*
 !data/processed/splits.csv
 !data/processed/clean_fingerprint.json
 !data/processed/near_dup_groups.csv
+!data/processed/near_dup_groups_minhash.csv
+# LSH neighbour features of the shared splits (~1.5 MB each); seed variants are regenerated, not committed
+!data/processed/features/lsh__*.csv
+data/processed/features/lsh__*__seed*.csv
 !data/processed/embeddings/minilm__clean.npy
 !data/processed/embeddings/minilm__clean__doc_ids.npy
 !data/processed/embeddings/minilm__clean.json

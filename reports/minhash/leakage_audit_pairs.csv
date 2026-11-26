@@ -1,0 +1,94 @@
+doc_val,doc_train,jaccard_2w,jaccard_3w,containment_3w,is_fake_val,is_fake_train,n_words_val,n_words_train,cosine,kind,title_val,title_train
+7602,22351,0.8412,0.8324,0.9798,1,1,1382,1126,0.6998,shared template text (cosine < 0.8),"BOOM! WATCH SEAN HANNITY Hit Back At Bogus Sexual Harassment Allegations: ""I can no long …",BLOGGER Comes Clean About Hannity Sexual Harassment Claim...Hannity's Former Producer Pu …
+36828,2583,0.7801,0.7701,0.9456,1,1,354,302,0.8432,same story (cosine >= 0.8),CLASSIC! PRESIDENT TRUMP Totally Rips CNN Reporter At Presser Over Comey Hearing [Video],WOW! SARA HUCKABEE-SANDERS Drops Mother Of All Verbal Bombs On Media Over Hypocrisy On C …
+23628,32201,0.7643,0.7045,0.8392,0,0,869,785,0.8946,same story (cosine >= 0.8),Contenders for key jobs in Trump administration,Factbox: Short list of potential picks for Trump administration
+60115,55974,0.75,0.7083,0.85,0,0,21,22,0.6861,short text (< 50 words),How Cruz rescued Carson,Ben Carson vs. Ben Carson
+8598,6857,0.7451,0.6727,0.8409,1,1,52,49,0.6365,short text (< 50 words),Boiler Room #105 - Quantum Swamp Chess,Boiler Room #103 - Smoking Gunz
+3653,29510,0.7391,0.7273,0.8889,0,0,19,21,0.6634,short text (< 50 words),Gaming Obamacare,Clinton's Iowa dilemma
+67594,43499,0.7374,0.6923,0.8471,1,1,107,93,0.5494,shared template text (cosine < 0.8),Chart Of The Day: The Bond Vigilantes Are Back! UST Yield Up 65bps Since Election,Chart Of The Day: The Ever-Widening Wage Gap
+45204,35596,0.7351,0.7316,0.8627,1,1,376,359,0.3672,shared template text (cosine < 0.8),Calif. Proposition Requires Permit to Buy Bullets,UN Chief urges South Africa to reconsider quitting ICC
+43674,43499,0.7273,0.6827,0.8353,1,1,101,93,0.6367,shared template text (cosine < 0.8),Chart Of The Day: Private Residential Construction Stalls-Out 40% Below Pre-Crisis Peak,Chart Of The Day: The Ever-Widening Wage Gap
+29972,43499,0.72,0.6762,0.8353,1,1,107,93,0.5598,shared template text (cosine < 0.8),"Chart Of The Day: Sorry, Mario! The Printing Press Can't Fix The Welfare State",Chart Of The Day: The Ever-Widening Wage Gap
+46883,24577,0.7159,0.6525,0.9174,1,1,2412,3252,0.7635,shared template text (cosine < 0.8),This is no 'new cold war'; it's far worse than that,This Is No 'Cold War'; It's Far Worse Than That.
+71325,27677,0.7143,0.6429,0.7826,0,0,24,24,0.8452,short text (< 50 words),7 takeaways from the first Democratic debate,14 key moments from the Democratic debate
+16023,18026,0.7104,0.6908,0.8235,1,1,537,542,0.7783,shared template text (cosine < 0.8),Most Hotly Contested Down-Ballot Measures Of 2016 - The Onion,Clinton Staff Readies EMP Launch To Disable All Nation's Electronic Devices - The Onion
+57724,11882,0.71,0.6933,0.9731,1,1,631,456,0.703,shared template text (cosine < 0.8),SARA CARTER Drops Shocker On Why A Shake-Up Is Eminent At The FBI [Video],MUELLER TOP PROSECUTOR Praised DOJ Official for Defying Trump Travel Ban [Video]
+2566,51224,0.7097,0.7,0.84,1,1,28,29,0.6224,short text (< 50 words),Bernie and the Sandernistas,Greil Marcus on Bob Dylan
+16694,21393,0.6981,0.6893,0.8996,1,1,526,637,0.4356,shared template text (cosine < 0.8),"Election Countdown and the Russians, with Trevor Loudon",WATCH: Mass Shooting Occurs During #TrumpRiot; Media Ignores (Video)
+51268,13173,0.6933,0.6543,0.8011,1,1,2365,2506,0.8844,same story (cosine >= 0.8),Can Trump Save America Like Putin Saved Russia? - The Saker,Only Trump can save America now - if he can survive and follow in the footsteps of Vladi …
+44354,15649,0.692,0.6591,0.9103,1,1,234,294,0.6889,shared template text (cosine < 0.8),Liberal Imperium: Quigley's Anglo-American Establishment - Jay Dyer (half),"The Secret Society That Ruined the World: Rhodes, Rothschild, Milner"
+24391,10356,0.6896,0.6714,0.8832,1,1,1115,946,0.6158,shared template text (cosine < 0.8),24-minute game-changing video: Electronic 'voting' machines without physical evidence =  …,"1-hour video: Bush-Clinton and .01% 'Deep State' criminals assassinated JFK, MLK, RFK, a …"
+22611,5546,0.687,0.6732,0.9665,1,1,623,852,0.5249,shared template text (cosine < 0.8),BOOM! TRUMP HITS BACK At UCLA Player's Father For Dissing His Efforts To Get Son Release …,HOW SO? CNN HOST Makes Claim President Trump Is 'Race Baiting' UCLA Player's Ungrateful  …
+56031,29510,0.68,0.6667,0.8,0,0,21,21,0.5992,short text (< 50 words),Obamacare group slashes staff,Clinton's Iowa dilemma
+7435,29510,0.68,0.6667,0.8,0,0,21,21,0.6217,short text (< 50 words),Are Democrats crippling Obamacare?,Clinton's Iowa dilemma
+43281,4422,0.6786,0.6667,0.8182,0,0,23,24,0.6852,short text (< 50 words),Immigration crackdown splits GOP,Congress inches closer to cliff
+67044,27677,0.6786,0.6071,0.7727,0,0,23,24,0.7815,short text (< 50 words),Five takeaways from the GOP debate,14 key moments from the Democratic debate
+39899,17084,0.6777,0.6745,0.9451,1,1,257,192,0.6934,shared template text (cosine < 0.8),World's Largest Space Telescope Set To Launch - The Onion,Beauty Queen Told To Lose Weight Quits Pageant - The Onion
+547,17084,0.6777,0.6745,0.9451,1,1,256,192,0.7789,shared template text (cosine < 0.8),How U.S. Schools Can Improve Math Education - The Onion,Beauty Queen Told To Lose Weight Quits Pageant - The Onion
+4854,36274,0.6765,0.6571,0.902,1,1,69,55,0.5554,shared template text (cosine < 0.8),The Truth About the #Syrianboy Viral Photo. Its really a story of two boys. #OmranDaqneesh,Theologarcy
+35277,21393,0.6762,0.6705,0.8678,1,1,535,637,0.3874,shared template text (cosine < 0.8),"Trump, Russia, and Spies",WATCH: Mass Shooting Occurs During #TrumpRiot; Media Ignores (Video)
+513,9302,0.671,0.6613,0.799,1,1,435,416,0.774,shared template text (cosine < 0.8),CBS Reporter Asks Putin How Comey's Firing Will Affect Russia...His Answer Is PRICELESS!,PUTIN Steals Famous President Bush Quote In Forceful Denial Of Russian Interference In U …
+49694,35596,0.6689,0.6725,0.8627,1,1,411,359,0.3859,shared template text (cosine < 0.8),"Palestinian rivals, Mideast regional powers growing uneasy with Abbas",UN Chief urges South Africa to reconsider quitting ICC
+68121,20878,0.6552,0.6429,0.8571,0,0,26,22,0.6751,short text (< 50 words),History class becomes a debate on America,Sabotaging Common Core
+24623,29510,0.6538,0.64,0.8,0,0,22,21,0.618,short text (< 50 words),"Insiders: Rubio wins, Kasich bombs",Clinton's Iowa dilemma
+11176,58811,0.6513,0.6293,0.9309,1,1,318,231,0.5165,shared template text (cosine < 0.8),The Bond Vigilantes Are Back--Just In Time To Stop Trumponomics,November 25: Daily Contrarian Reads
+48030,3659,0.6512,0.6314,0.9457,1,1,225,338,0.8153,same story (cosine >= 0.8),Watch: Trump Finally Weighs In On NFL Player Protests...In A BIG Way! [Video],Redskins Player Has Tantrum: 'We're being teared down from in the White House' #BoycottN …
+57468,31837,0.6471,0.6364,0.8077,0,0,28,30,0.7474,short text (< 50 words),GOP hits back at fracking rules,GOP avoids showdown over EPA climate change rules
+30080,53944,0.6423,0.6167,0.9487,1,1,361,540,0.6497,shared template text (cosine < 0.8),"BUSTED! UNCOVERED 2009 VIDEO Shows London's Muslim Mayor Calling Moderate Muslims ""Uncle …","WOW! LONDON MAYOR Hammered By Piers Morgan: ""Where are the 400 terrorists?"" [Video]"
+71226,6471,0.6333,0.6207,0.8182,0,0,27,24,0.6145,short text (< 50 words),Bibi's victory is Kerry's defeat,Bernie's California endgame
+29134,20878,0.6333,0.6207,0.8571,0,0,27,22,0.4765,short text (< 50 words),How Democrats killed Obama's college savings plan,Sabotaging Common Core
+17739,4422,0.6333,0.6207,0.7826,0,0,25,24,0.6403,short text (< 50 words),Momentum to bar Syrian refugees slows,Congress inches closer to cliff
+17043,6857,0.6296,0.5893,0.75,1,1,46,49,0.5772,short text (< 50 words),"Boiler Room EP #123 - Right vs. Left, Jerry Springer Style",Boiler Room #103 - Smoking Gunz
+61431,29510,0.6296,0.6154,0.8,0,0,23,21,0.5657,short text (< 50 words),Obamacare's unlikely No. 1 city,Clinton's Iowa dilemma
+61425,29510,0.6296,0.6154,0.8,0,0,23,21,0.6048,short text (< 50 words),Rubio battles Cruz for Iowa edge,Clinton's Iowa dilemma
+69878,68070,0.6296,0.6154,0.7619,0,0,23,24,0.6556,short text (< 50 words),Trump's tragic victory lap,Hillary Clinton's 'Delegate Hell'
+55625,29510,0.6296,0.6154,0.8,0,0,23,21,0.6348,short text (< 50 words),Conservatives fear leaders soft on Obamacare,Clinton's Iowa dilemma
+30297,36371,0.6233,0.6101,0.9463,1,1,313,207,0.7936,shared template text (cosine < 0.8),Alien Visitors? No Explanation for Mysterious Lights in Night Sky Over Arizona,Alien Visitors? No Explanation for Mysterious Lights in Night Sky Over Arizona
+56649,72096,0.6224,0.5826,0.7647,1,0,942,904,0.7908,shared template text (cosine < 0.8),NEW SMOKING GUN IRS DOCUMENTS Prove Targeting of Conservative Groups,Fitton: Documents Confirm that Obama IRS Improperly Targeted Conservatives
+28128,21707,0.6223,0.5773,0.8717,0,0,1313,946,0.5983,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+24312,21707,0.6189,0.5745,0.8717,0,0,1320,946,0.5704,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+1285,67831,0.6154,0.6053,0.7931,0,0,33,30,0.7352,short text (< 50 words),White House looks to scientists to sell Iran deal,Drudge goes all in for Trump
+45749,3778,0.6139,0.612,0.8971,0,1,914,1224,0.8862,same story (cosine >= 0.8),Factbox: The race to the U.S. presidential nominations: How delegates are selected,DELEGATES FOR DUMMIES: How They're Awarded...And How Many Your Candidate Needs To Win
+49660,32201,0.6076,0.5454,0.7208,0,0,852,785,0.8152,same story (cosine >= 0.8),Contenders for key jobs in Trump administration,Factbox: Short list of potential picks for Trump administration
+71159,46855,0.6074,0.5865,0.9456,1,1,476,310,0.6543,shared template text (cosine < 0.8),'MORNING JOE' HOSTS Hail John Conyers as 'Icon'...Who 'Shows Up In His Pajamas' [Video],PELOSI CLAIMS Congressman Who Shows Up for Meetings in His Underwear is an 'ICON' [Video]
+59832,29510,0.6071,0.5926,0.8,0,0,24,21,0.5276,short text (< 50 words),Cruz and Trump battle for the South,Clinton's Iowa dilemma
+54874,23373,0.6049,0.5836,0.7874,1,1,547,471,0.7887,shared template text (cosine < 0.8),"""Wikileaks is the Mossad, Stupid, Not the Russians, We are playing them like a fiddle... …","Julian Assange Ends The Suspense: ""The Source Of Hacked Emails Is Not Russia"""
+22025,4335,0.6046,0.5425,0.7545,0,0,659,756,0.837,same story (cosine >= 0.8),Hurricane Irma threatens power losses for millions in Florida,Hurricane Irma may cut power to over 9 million people in Florida: utility
+13819,15981,0.6,0.5862,0.8095,0,0,27,23,0.7777,short text (< 50 words),"Cruz copying me on border wall, Trump says",Cruz's immigration gambit
+60784,53121,0.5945,0.5281,0.8333,0,0,283,404,0.8866,same story (cosine >= 0.8),Mnuchin says no regrets over government plane use,Treasury watchdog finds Mnuchin's private jet trips broke no law
+3584,3778,0.5907,0.5823,0.9301,0,1,818,1224,0.8559,same story (cosine >= 0.8),Factbox: The race to the U.S. presidential nominations: How delegates are selected,DELEGATES FOR DUMMIES: How They're Awarded...And How Many Your Candidate Needs To Win
+19187,3778,0.5895,0.5837,0.9396,0,1,806,1224,0.8663,same story (cosine >= 0.8),Factbox: The race to the U.S. presidential nominations: How delegates are selected,DELEGATES FOR DUMMIES: How They're Awarded...And How Many Your Candidate Needs To Win
+42202,64251,0.5863,0.5811,0.9636,1,1,382,646,0.6257,shared template text (cosine < 0.8),PELOSI LOSES IT: Calls Tax Cuts 'End of the World'...'Armageddon!' [Video],PELOSI TWEETS to California Republicans: 'You don't belong here'...Is Immediately Destro …
+3125,68070,0.5862,0.5714,0.7619,0,0,25,24,0.6926,short text (< 50 words),Delegates face death threats from Trump supporters,Hillary Clinton's 'Delegate Hell'
+63765,70333,0.5769,0.56,0.8235,0,0,25,20,0.6776,short text (< 50 words),Ryan flexes muscles in Ways and Means showdown,Boehner takes revenge
+4239,21393,0.5748,0.5642,0.7532,1,1,700,637,0.3945,shared template text (cosine < 0.8),"Media Blackout: Hundreds Of Black Teens Attack Temple Students, Police And A Horse (Video)",WATCH: Mass Shooting Occurs During #TrumpRiot; Media Ignores (Video)
+18637,18580,0.5737,0.5673,0.9398,1,1,268,168,0.8648,same story (cosine >= 0.8),"THE NERVE! #KathyGriffin Blames the Victim in Ridiculous Presser with Lawyer: ""He broke  …",KATHY GRIFFIN Lawyers Up with Ridiculous Claim Against the Trump Family
+49847,53469,0.5714,0.5309,0.9556,1,1,82,47,0.7171,short text (< 50 words),The Latest Dirt on the Clinton Foundation,The Latest Dirt on the Clinton Foundation
+56217,21707,0.569,0.5285,0.8686,0,0,1435,946,0.5122,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+44650,66445,0.5682,0.5581,0.7273,1,1,38,36,0.4154,short text (< 50 words),"News And Views From The Nefarium - November 3, 2016 [Video]","Hillary Clinton, the Most Corrupt Politician in History [Audio]"
+47101,5546,0.5673,0.5463,0.9677,1,1,477,852,0.5497,shared template text (cosine < 0.8),UCLA PLAYER'S FATHER Disses Trump On China Release...Downplays His Son's Crime: 'I've se …,HOW SO? CNN HOST Makes Claim President Trump Is 'Race Baiting' UCLA Player's Ungrateful  …
+30849,29510,0.5667,0.5517,0.8,0,0,26,21,0.6209,short text (< 50 words),GOP campaigns push to take more control of debates,Clinton's Iowa dilemma
+21495,21707,0.5636,0.5261,0.8675,0,0,1441,946,0.5321,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+62549,21707,0.5625,0.5197,0.8728,0,0,1479,946,0.5142,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+55692,51277,0.5613,0.556,0.9781,1,1,738,418,0.6008,shared template text (cosine < 0.8),Gardasil Vaccine Given without Consent and Ruins Life of 14 Year Old Girl,Retracted Paper Linking HPV Vaccine to Behavioral Issues Republished
+986,22477,0.5612,0.4816,0.6856,1,1,480,512,0.9149,same story (cosine >= 0.8),Christian Pastor Jailed by Iran Reveals STUNNING Truth About Trump,FLASHBACK: AMERICAN PASTOR Tells What Trump Did For His Family While He Was In Iranian P …
+20751,6471,0.5588,0.5455,0.8182,0,0,32,24,0.6821,short text (< 50 words),Wasserman Schultz on Sanders' response to Nevada chaos: 'Anything but acceptable',Bernie's California endgame
+23076,21393,0.5532,0.5438,0.7468,1,1,722,637,0.4515,shared template text (cosine < 0.8),Weekly Featured Profile - Shane Brinton,WATCH: Mass Shooting Occurs During #TrumpRiot; Media Ignores (Video)
+12059,3314,0.5521,0.5192,0.6968,1,1,318,327,0.7772,shared template text (cosine < 0.8),Grassroot Voter Fraud Investigation Hacked,Trump Votes Are Being Flipped To Clinton
+70575,21707,0.5491,0.5078,0.8591,0,0,1480,946,0.5356,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+14973,61942,0.5435,0.4927,0.7542,0,0,924,722,0.8537,same story (cosine >= 0.8),'Rain begins with a single drop:' Saudi women rejoice at end of driving ban,Saudi women rejoice at end of driving ban long backed by clerics
+51414,63547,0.5435,0.4936,0.8369,0,0,503,329,0.8466,same story (cosine >= 0.8),Israel president rejects pardon appeal of soldier who killed prone Palestinian assailant,Israel cuts jail term of soldier who killed prone Palestinian assailant
+40163,6471,0.5429,0.5294,0.8182,0,0,32,24,0.3884,short text (< 50 words),Can Libertarian nominees Gary Johnson and Bill Weld siphon votes from Trump?,Bernie's California endgame
+43591,50267,0.5258,0.4958,0.6868,1,1,429,470,0.6567,shared template text (cosine < 0.8),"WHOA! BLOOD, SEMEN AND BREASTMILK...Hillary's Campaign Chairman's Most Disturbing Email  …",Spirit Cooking: The Most Disturbing Podesta Email Yet? (Warning: Graphic Content)
+67684,51277,0.5249,0.5262,0.9781,1,1,767,418,0.4266,shared template text (cosine < 0.8),Iowa Girl Faces Death: Life Destroyed by Gardasil Vaccine,Retracted Paper Linking HPV Vaccine to Behavioral Issues Republished
+6316,34943,0.5217,0.4911,0.6667,0,0,174,181,0.9114,same story (cosine >= 0.8),Breitbart News Daily: Trump vs. the Bureaucrats,Breitbart News Daily: Gorsuch for SCOTUS
+22736,70621,0.5185,0.5,0.6842,0,0,22,21,0.6019,short text (< 50 words),Bobby Jindal governing like it's 2016,The Kochs' plan to beat Reid
+11771,48391,0.5171,0.4946,0.6862,1,1,593,538,0.8214,same story (cosine >= 0.8),"BREAKING BOMBSHELL: NYPD blows whistle on new Hillary emails: Money Laundering, Pay to P …","NYPD: Hillary Clinton 'Child Sex Scandal' About To Break, SHE IS GOING TO PRISON FOR LIFE!"
+38545,21782,0.5167,0.4875,0.8,1,1,240,317,0.8923,same story (cosine >= 0.8),NEW EMAILS IN CLINTON CASE CAME FROM ANTHONY WEINER'S ELECTRONIC DEVICES,WILL SEXTING By Anthony Weiner Finally Bring Down Hillary Clinton?
+57861,45352,0.5115,0.5106,0.973,1,1,95,154,0.8106,same story (cosine >= 0.8),America's Streets Will Run Red With Blood- Mike Adams,America's Streets Will Run Red With Blood- Mike Adams
+69023,21707,0.5103,0.4672,0.8318,0,0,1534,946,0.7872,shared template text (cosine < 0.8),Factbox: Trump fills top jobs for his administration,Factbox: Trump fills top jobs for his administration
+34499,26906,0.5089,0.4906,0.9458,1,1,526,288,0.87,same story (cosine >= 0.8),Bridging the black vote gap: Trump promises 'new deal for black America',Trump Promises 'New Deal for Black America'
+64863,61546,0.5085,0.5246,0.7619,1,1,62,53,0.7901,shared template text (cosine < 0.8),"ATTENTION WESTERN WORLD: If You Care About Your Country's Security, Make Sure Everyone G …",Hamas Member Admits On Live TV That 'Palestine' Never Existed
+28551,9881,0.5083,0.4368,0.665,0,0,400,479,0.9037,same story (cosine >= 0.8),New Zealand calls in navy to beat jet fuel shortage before vote,New Zealand jet fuel rations increased as government calls in navy to beat shortage
+22089,50116,0.5076,0.501,0.6921,1,1,384,359,0.8168,same story (cosine >= 0.8),TWO SENATORS SAY NO TO MOVING MUSLIM TERRORISTS FROM GUANTANAMO BAY TO THEIR STATES,SENATORS UP IN ARMS OVER OBAMA ADMINISTRATION PLANS TO MOVE GITMO TO TWO DIFFERENT STATES
+56136,45352,0.5076,0.5035,0.9474,1,1,93,154,0.8082,same story (cosine >= 0.8),America's Streets Will Run With Blood- Mike Adams,America's Streets Will Run Red With Blood- Mike Adams

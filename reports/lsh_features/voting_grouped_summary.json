@@ -1,0 +1,39 @@
+{
+  "regime": "grouped",
+  "design": "fixed",
+  "chosen_method": "lsh_64x2_k2",
+  "shingle_words": 2,
+  "bands": 64,
+  "rows": 2,
+  "k": 3,
+  "min_sim": 0.1,
+  "fallback": "train fake rate",
+  "selection": "max val ROC-AUC over LSH methods",
+  "metric_note": "main: coverage, f1_covered, roc_auc_overall; secondary: f1_overall, accuracy_overall",
+  "val": {
+    "coverage": 0.1598,
+    "coverage_fake": 0.1181,
+    "coverage_real": 0.1931,
+    "f1_covered": 0.9178,
+    "accuracy_covered": 0.946,
+    "f1_overall": 0.1941,
+    "accuracy_overall": 0.5998,
+    "roc_auc_overall": 0.6286
+  },
+  "n": {
+    "train": 43766,
+    "val": 9380
+  },
+  "random_setting_on_val": {
+    "k": 5,
+    "min_sim": 0.1,
+    "coverage": 0.1598,
+    "coverage_fake": 0.1181,
+    "coverage_real": 0.1931,
+    "f1_covered": 0.9178,
+    "accuracy_covered": 0.946,
+    "f1_overall": 0.1941,
+    "accuracy_overall": 0.5998,
+    "roc_auc_overall": 0.6286
+  }
+}

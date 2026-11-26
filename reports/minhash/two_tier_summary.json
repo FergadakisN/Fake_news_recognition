@@ -1,0 +1,77 @@
+{
+  "threshold_cosine": 0.92,
+  "minhash_threshold_jaccard": 0.7,
+  "top_k": 10,
+  "containment_rule": {
+    "cosine_from": 0.9,
+    "cosine_below": 0.92,
+    "containment_min": 0.7
+  },
+  "embedding_pairs": 2517,
+  "embedding_pairs_new_links": 829,
+  "links_by_rule": {
+    "embedding": 2274,
+    "containment": 243
+  },
+  "minhash_tier_alone": {
+    "groups_2plus": 1002,
+    "articles": 2445,
+    "largest_group": 40,
+    "mixed_label_groups": 13
+  },
+  "final": {
+    "groups_2plus": 1433,
+    "articles": 3494,
+    "share_of_all_articles": 0.0559,
+    "largest_group": 40,
+    "mixed_label_groups": 46,
+    "articles_in_mixed_groups": 101
+  },
+  "by_tier": {
+    "both": {
+      "groups": 51,
+      "articles": 204,
+      "mixed": 3
+    },
+    "both+containment": {
+      "groups": 27,
+      "articles": 133,
+      "mixed": 0
+    },
+    "embedding": {
+      "groups": 404,
+      "articles": 883,
+      "mixed": 31
+    },
+    "embedding+containment": {
+      "groups": 37,
+      "articles": 79,
+      "mixed": 2
+    },
+    "minhash": {
+      "groups": 914,
+      "articles": 2195,
+      "mixed": 10
+    }
+  },
+  "minhash_groups_enlarged_or_joined": 88,
+  "embedding_links_by_type": {
+    "minhash": 1688,
+    "truncated_copy": 189,
+    "edited_copy": 127,
+    "partial_overlap": 346,
+    "paraphrase": 167
+  },
+  "containment_rule_links_by_type": {
+    "minhash": 159,
+    "truncated_copy": 33,
+    "edited_copy": 26,
+    "partial_overlap": 25,
+    "paraphrase": 0
+  },
+  "link_type_rules": {
+    "copy_containment": 0.8,
+    "paraphrase_containment": 0.3,
+    "truncation_length_ratio": 1.5
+  }
+}

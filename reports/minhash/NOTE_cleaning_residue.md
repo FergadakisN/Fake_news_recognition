@@ -42,3 +42,23 @@ it is a small label signal.
 
 Some copies of the same article drop the apostrophe ("theres", "hes") where others replace it with a space
 ("there s", "he s"), e.g. docs 41249 vs 53052. This only lowers similarity slightly and does not look worth a rule.
+
+## 4. Shared author-bio header (found by the embedding tier)
+
+Three fake articles from one site begin with the same author biography, right after the title and a scraped
+headline carousel ("veteran it training program leads to 100% job placement ‹ ›"):
+
+> "sartre is the pen name of james hall, a reformed, former political operative. this pundit s formal instruction in
+> history, philosophy and political science served as training for activism, …"
+
+| Articles | Labels | Example doc_ids | Where |
+|---|---|---|---|
+| 3 | all fake | 24500, 47744, 56232 | starts ~100 characters into `content`, after the title |
+
+The articles are about different things. MiniLM only reads the opening of an article, so the shared bio makes their
+embeddings nearly identical (24500 / 47744: cosine 0.946, while their 3-word Jaccard is only 0.08). The pair is
+therefore linked in the embedding tier of the near-duplicate groups at cosine ≥ 0.92, as a false "paraphrase". That
+link joins two genuine MinHash groups (2 copies of "Globalist plan for human control", docs 9507 and 24500, and 4
+copies of "Only demented imbeciles want a Killary reign of terror", docs 16151, 47744, 56232 and 58844) into one
+group of 6 (group_id 9507). The impact is small (all 6 are fake and from one site), but it is the same kind of
+residue as the byline/bio rules in G1/G2. The carousel text before it is scraping residue as well.

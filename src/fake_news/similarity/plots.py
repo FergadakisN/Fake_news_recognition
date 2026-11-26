@@ -116,3 +116,86 @@ def group_sizes(table: pd.DataFrame):
            title=f"{len(table):,} near-duplicate groups with 2+ articles")
     ax.legend(loc="upper right")
     return fig
+
+
+def s_curves(curves: pd.DataFrame):
+    """Measured vs theoretical LSH S-curve, one panel per banding (scripts/evaluate_lsh.py).
+
+    ``curves`` has ``data`` (sample / full), ``banding`` ("16x8"), ``shingle_words``, ``mean_j``, ``measured``,
+    ``ci_low``, ``ci_high``. Line: theoretical P(candidate | s). Hollow dots: the 3,000-article sample (all
+    pairs). Filled dots: the full data (pairs with J >= 0.2). Whiskers: 95% Wilson interval.
+    """
+    import matplotlib.pyplot as plt
+
+    use_style()
+    panels = curves[["shingle_words", "banding"]].drop_duplicates().sort_values(["shingle_words", "banding"],
+                                                                                ascending=[False, True])
+    fig, axes = plt.subplots(1, len(panels), figsize=(3.1 * len(panels), 3.4), sharey=True)
+    s = np.linspace(0, 1, 201)
+    for ax, (_, p) in zip(np.atleast_1d(axes), panels.iterrows()):
+        bands, rows = map(int, p["banding"].split("x"))
+        ax.plot(s, lsh.candidate_probability(s, bands, rows), color=INK2, linewidth=2, label="theoretical")
+        d = curves[(curves["banding"] == p["banding"]) & (curves["shingle_words"] == p["shingle_words"])]
+        for data, face, label in (("sample", SURFACE, "measured, 3,000 sample"), ("full", INK, "measured, full data")):
+            m = d[d["data"] == data]
+            if len(m):
+                ax.errorbar(m["mean_j"], m["measured"], yerr=[m["measured"] - m["ci_low"], m["ci_high"] - m["measured"]],
+                            fmt="o", color=INK, markerfacecolor=face, markersize=5, elinewidth=1, capsize=0,
+                            label=label)
+        ax.set(title=f"{p['banding'].replace('x', ' x ')}, {p['shingle_words']}-word shingles", xlabel="exact Jaccard",
+               xlim=(0, 1), ylim=(-0.03, 1.05))
+    np.atleast_1d(axes)[0].set_ylabel("P(candidate pair)")
+    np.atleast_1d(axes)[0].legend(loc="upper left", fontsize=8)
+    return fig
+
+
+def leak_share_curves(curves: pd.DataFrame):
+    """Share of val articles whose closest training article has 2-word Jaccard >= t, random vs grouped split."""
+    import matplotlib.pyplot as plt
+
+    use_style()
+    fig, ax = plt.subplots(figsize=(7, 3.6))
+    for col, style, color in (("random", "--", MUTED), ("grouped", "-", INK)):
+        ax.plot(curves["threshold"], 100 * curves[col], style, color=color, linewidth=2)
+        last = curves.iloc[np.searchsorted(curves["threshold"], 0.6)]
+        ax.annotate(f"{col} split", (last["threshold"], 100 * last[col]), xytext=(4, 4 if col == "random" else -12),
+                    textcoords="offset points", fontsize=9, color=INK2)
+    for t in (0.3, 0.5):
+        ax.axvline(t, color=AXIS, linewidth=1)
+    ax.set_yscale("log")
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))   # 0.1, 1, 10 instead of 10^x
+    ax.set(xlabel="threshold t (2-word Jaccard of the closest training article)",
+           ylabel="val articles with a train neighbour >= t (%)", xlim=(0.1, 1),
+           title="How close is the nearest training article? (val, train-only LSH index)")
+    return fig
+
+
+def feature_distributions(feats: pd.DataFrame, labels: pd.Series, part: str = "val"):
+    """fake_neighbor_share and max_jaccard of the articles of one partition that have a neighbour, real vs fake.
+
+    ``feats`` is a table from ``load_lsh_features``; articles without neighbours (the fallback value) are left
+    out, and their number is in the title.
+    """
+    import matplotlib.pyplot as plt
+
+    use_style()
+    p = feats[feats["split"] == part]
+    y = labels.reindex(p["doc_id"]).to_numpy()
+    has = p["neighbor_count"].to_numpy() > 0
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.3))
+    for ax, col, bins in ((axes[0], "fake_neighbor_share", np.linspace(0, 1, 11)),
+                          (axes[1], "max_jaccard", np.linspace(0.1, 1, 19))):
+        values = p[col].to_numpy()
+        counts = [np.histogram(values[has & (y == c)], bins=bins)[0] for c in (0, 1)]
+        w = (bins[1] - bins[0]) * 0.42
+        centers = (bins[:-1] + bins[1:]) / 2
+        ax.bar(centers - w / 2, counts[0], width=w, color=REAL, label="real", edgecolor=SURFACE, linewidth=1)
+        ax.bar(centers + w / 2, counts[1], width=w, color=FAKE, label="fake", edgecolor=SURFACE, linewidth=1)
+        ax.set(xlabel=col, ylabel=f"{part} articles")
+    axes[1].set_yscale("log")
+    axes[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
+    axes[1].set_ylabel(f"{part} articles (log scale)")
+    axes[0].legend(loc="upper center")
+    fig.suptitle(f"LSH neighbour features of the {has.sum():,} {part} articles with a neighbour "
+                 f"({(~has).sum():,} without one are not shown)", x=0.01, ha="left", fontsize=11, color=INK)
+    return fig
