@@ -1,0 +1,9 @@
+cluster,n_train,fake_share_train,fallback,n_val,val_auc_model_c,val_auc_global_lr,top_terms
+3,9847,0.2353,False,2899,0.9567,0.9655,"minister, prime, police, israel, parliament, european, eu, government, germany, jerusalem, iran, merkel"
+1,8821,0.8203,False,1430,0.9625,0.9623,"trump, donald, video, watch, just, america, racist, cnn, twitter, white, know, fox"
+6,5985,0.5151,False,1193,0.9517,0.9533,"life, like, ms, mr, school, love, time, world, young, feel, just, book"
+5,4947,0.3554,False,556,0.9769,0.9832,"billion, companies, percent, company, million, market, economy, industry, jobs, economic, financial, federal"
+2,3870,0.5977,False,1861,0.9622,0.9737,"clinton, hillary, election, voters, trump, presidential, vote, campaign, candidate, poll, voting, democratic"
+4,3495,0.3082,False,1097,0.9331,0.9499,"court, supreme, judge, justice, law, federal, legal, case, attorney, ruling, appeals, order"
+0,3307,0.2474,False,163,0.9634,0.9702,"syria, islamic, syrian, forces, al, iraq, military, iraqi, killed, militants, kurdish, fighters"
+7,3054,0.1955,False,193,0.9787,0.9997,"obamacare, senate, house, tax, republicans, healthcare, legislation, republican, health, congress, repeal, insurance"

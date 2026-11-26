@@ -1,0 +1,39 @@
+{
+  "k": 32,
+  "features": "sentence embeddings (all-MiniLM-L6-v2), all cleaned articles, no labels",
+  "kmeans": {
+    "n_init": 10,
+    "random_state": 42
+  },
+  "near_duplicate_articles_moved": 258,
+  "assignment": {
+    "function": "make_group_split(stratify=False)",
+    "seeds_tried": 500,
+    "chosen_seed": 407,
+    "balance_score": 0.0117,
+    "min_clusters_val_test": 3,
+    "score": "max |fraction - target| + max |fake share - overall fake share|"
+  },
+  "partitions": {
+    "train": {
+      "n": 43326,
+      "fraction": 0.693,
+      "fake_rate": 0.443,
+      "clusters": 22
+    },
+    "val": {
+      "n": 9392,
+      "fraction": 0.15,
+      "fake_rate": 0.449,
+      "clusters": 5
+    },
+    "test": {
+      "n": 9807,
+      "fraction": 0.157,
+      "fake_rate": 0.444,
+      "clusters": 5
+    }
+  },
+  "overall_fake_rate": 0.4441,
+  "seconds": 21.2
+}

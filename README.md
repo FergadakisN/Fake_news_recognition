@@ -103,8 +103,8 @@ val   = df[df.split == "val"]
 df = load_dataset("random", columns=["content"])   # less memory: doc_id, content, is_fake, split
 ```
 
-`load_dataset(regime)` takes `"random"` now; `"grouped"` (near-duplicate groups kept together) and
-`"cluster"` (whole K-means clusters held out) appear once those columns are added to `splits.csv`.
+`load_dataset(regime)` takes `"random"`, `"grouped"` (near-duplicate groups kept together) and `"cluster"`
+(whole topic clusters held out, see below).
 
 | Function (`from fake_news.data import ...`) | Returns |
 |---|---|
@@ -148,6 +148,33 @@ save_split_column("grouped", split)                         # adds split_grouped
 
 For a few large K-means clusters use `make_group_split(clean, clusters, stratify=False)`.
 `save_split_column` refuses to overwrite an existing column unless `overwrite=True`.
+
+### The cluster split (Person 2)
+
+`split_cluster` holds out whole **topic clusters**: val and test contain topics that no training article belongs to.
+It is the hardest of the three regimes and tests whether a model generalises to unseen stories.
+
+```bash
+python scripts/build_cluster_split.py      # ~25 s; refuses to overwrite split_cluster (pass --overwrite)
+```
+
+1. K-means (K = 32) on the sentence embeddings of **all** cleaned articles. No labels are used, so, like the
+   near-duplicate groups, the clusters can exist before the split. (K-means *inside* a model is still fitted on train.)
+2. A near-duplicate group whose copies fall into different clusters is moved into its majority cluster (258 articles),
+   so no copy of a story crosses partitions.
+3. Whole clusters are assigned with `make_group_split(stratify=False)`. 500 assignment orders are tried and the one
+   closest to 70/15/15 with the overall fake share in every partition is kept (at least 3 clusters in val and in test).
+   Only sizes and the overall label balance are used, never a model result.
+
+| Partition | Share | Fake share | Held-out topics |
+|---|---|---|---|
+| train | 69.3% | 44.3% | 22 clusters |
+| val | 15.0% | 44.9% | Brexit, Clinton emails/FBI, North Korea, Russia investigation, police/shootings |
+| test | 15.7% | 44.4% | health/medicine, Russia/Putin, White House staff, Democratic primaries, Republican primaries |
+
+Neighbouring topics can stay in train (e.g. other Russia or election clusters), so "unseen" means an unseen
+*cluster*, not a subject that never occurs. Files: `data/processed/topic_clusters.csv` (`doc_id, cluster`, in git),
+`reports/cluster_split/clusters.csv` (size, fake share, partition, top words per cluster) and `summary.json`.
 
 ### Sentence embeddings (Person 3)
 
@@ -255,6 +282,50 @@ predictions, and saves its tables to `reports/lsh_features/voting_<regime>_*`.
 false positives, S-curves, runtime) on a 3,000-article sample and on the full data, the feature index against exact
 search, and a leakage audit of `split_grouped` on val. Tables in `reports/minhash/lsh_eval_*` and `leakage_audit_*`;
 all parameters, key numbers and limitations in [REPORT_NOTES.md](reports/minhash/REPORT_NOTES.md).
+
+### Topic clusters and Model C (K-means, Person 2)
+
+Model C groups the articles into topics with K-means and trains one logistic regression per topic (cluster routing).
+Walkthrough, figures and the analysis of the topic shortcut: [notebooks/05-kmeans.ipynb](notebooks/05-kmeans.ipynb).
+
+1. Classifier features: TF-IDF of `content` (fitted on train).
+2. Cluster vectors (`--cluster-on`): the sentence **embeddings** (default) or TF-IDF reduced to 200 dimensions with
+   TruncatedSVD (`svd`, a comparison). K-means on the train vectors (k-means++, 10 restarts).
+3. One logistic regression per cluster on the TF-IDF features. A cluster with fewer than 200 train articles or only one
+   class falls back to a global logistic regression.
+4. A new article goes to its nearest centroid and is scored by that cluster's classifier.
+
+```bash
+python scripts/run_model_c.py --regime grouped                    # ~40 s: compares K in {8, 16, 32} x C in {10, 30, 100} on val
+python scripts/run_model_c.py --regime random                     # keeps the K and C chosen on grouped; also --regime cluster
+python scripts/run_model_c.py --regime grouped --cluster-on svd   # the TF-IDF + SVD comparison (files tagged __svd / _svd)
+```
+
+```python
+from fake_news.models.model_c import ModelC
+model = ModelC(k=8, c=100).fit(train.content, train.is_fake, train.doc_id)     # doc_ids look up the embeddings
+prob_fake, cluster = model.predict_proba(val.content, val.doc_id), model.assign(val.content, val.doc_id)
+```
+
+The setting is chosen on grouped val by Model C's ROC-AUC (**K = 8, C = 100** in both spaces) and kept on the other
+splits. Every run also scores a global logistic regression on the same features (the "no routing" configuration, tuned
+over the same C values) and a `topic_only` reference that predicts the cluster's train fake share.
+
+| Val ROC-AUC (K = 8) | random | grouped | cluster |
+|---|---|---|---|
+| global LR (no routing) | 0.978 | 0.979 | 0.975 |
+| Model C, embedding clusters | 0.975 | 0.975 | 0.962 |
+| Model C, SVD clusters | 0.976 | 0.977 | 0.969 |
+| cluster alone (embeddings / SVD) | 0.71 / 0.75 | 0.71 / 0.75 | 0.72 / 0.77 |
+
+Cluster routing does not beat one global classifier, and it loses clearly more on unseen topics (`cluster`: −2.7
+accuracy points with embedding clusters vs −0.75 for the global LR). Averaged with the global LR it gives a small, real
+gain on seen topics (+0.0015; controls in notebook 05), which disappears on unseen topics.
+
+- `data/processed/predictions/model_c[_svd]__<regime>.csv`: `doc_id, split, prob_fake` for val and test.
+- `data/processed/predictions/model_c[_svd]__<regime>__clusters.csv`: `doc_id, split, cluster` for every article.
+- `reports/model_c/<regime>[__svd]_tuning.csv`, `_clusters.csv`, `_summary.json`: every setting on val, a per-cluster
+  table (size, fake share, characteristic words, val ROC-AUC of Model C and the global model), and the chosen setting.
 
 ### Paths and constants
 
@@ -366,24 +437,26 @@ Unit tests on small examples, plus checks of your real data against the referenc
 │   ├── interim/        Cleaned data (not in git)
 │   └── processed/      splits.csv, clean_fingerprint.json, near_dup_groups[_minhash].csv, features/, embeddings/ (in git), predictions/ (not in git)
 ├── models/             Trained and serialized models
-├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh
+├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh, 05-kmeans
 ├── reports/
 │   ├── cleaning/       Cleaning log, DECISIONS.md (in git)
 │   ├── minhash/        Near-duplicate statistics, LSH feature design and sanity checks, LSH evaluation,
 │   │                   REPORT_NOTES.md, note on cleaning residue
 │   ├── lsh_features/   Neighbour voting analysis on val (how informative the neighbours are)
+│   ├── model_c/        Model C tuning, per-cluster tables and chosen setting
 │   └── figures/        Figures for the report
 ├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings),
 │                       find_near_duplicates.py + find_paraphrases.py (groups), build_grouped_split.py,
 │                       build_lsh_features.py (LSH features),
 │                       run_model_b.py (neighbour voting analysis, not a pipeline model),
-│                       evaluate_lsh.py (LSH vs exact Jaccard, leakage audit)
+│                       evaluate_lsh.py (LSH vs exact Jaccard, leakage audit),
+│                       run_model_c.py (Model C: K-means + per-cluster LR)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions
 │   ├── data/           load.py, clean.py, markers.py (rules + decisions), split.py, integrity.py
 │   ├── features/       Text preprocessing and feature extraction; embeddings.py (sentence embeddings)
 │   ├── similarity/     MinHash, LSH, near-duplicate groups, LSH neighbour features (from scratch)
-│   ├── models/         Training and prediction
+│   ├── models/         Training and prediction; model_c.py (K-means + per-cluster LR)
 │   └── evaluation/     metrics.py (evaluate), predictions.py (shared prediction files)
 ├── tests/              Unit tests
 ├── pyproject.toml      Package definition for `pip install -e .`

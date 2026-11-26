@@ -1,0 +1,9 @@
+cluster,n_train,fake_share_train,fallback,n_val,val_auc_model_c,val_auc_global_lr,top_terms
+3,9871,0.6362,False,2190,0.9658,0.9696,"trump, clinton, hillary, donald, campaign, candidate, presidential, republican, voters, election, cruz, sanders"
+1,5683,0.6365,False,1227,0.9428,0.9484,"police, black, officers, gun, shooting, video, man, arrested, protesters, violence, county, enforcement"
+6,5599,0.4792,False,1204,0.9744,0.9742,"company, life, world, water, ms, food, study, dr, film, research, earth, scientists"
+2,5313,0.249,False,1196,0.9672,0.9758,"senate, tax, obamacare, republicans, republican, house, healthcare, legislation, congress, health, federal, plan"
+0,5129,0.5915,False,1036,0.9755,0.9774,"fbi, clinton, investigation, comey, emails, intelligence, russia, hillary, russian, information, email, director"
+4,4610,0.192,False,937,0.9744,0.9746,"korea, nuclear, north, china, united, sanctions, russia, states, missile, foreign, iran, korean"
+5,4437,0.2709,False,914,0.9777,0.9808,"islamic, syria, al, syrian, forces, military, killed, iraq, turkey, saudi, iraqi, militants"
+7,3125,0.1325,False,675,0.9908,0.9854,"eu, minister, european, brexit, parliament, party, prime, britain, union, government, merkel, opposition"

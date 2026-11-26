@@ -1,0 +1,9 @@
+cluster,n_train,fake_share_train,fallback,n_val,val_auc_model_c,val_auc_global_lr,top_terms
+4,7646,0.7682,False,1879,0.9401,0.9628,"video, black, trump, racist, media, women, hillary, watch, hate, woman, white, twitter"
+2,7090,0.6417,False,1916,0.9665,0.9788,"trump, donald, clinton, hillary, election, campaign, presidential, president, voters, candidate, republican, poll"
+7,6289,0.4827,False,692,0.9229,0.954,"company, ms, life, mr, world, film, season, earth, game, best, technology, space"
+5,4810,0.3992,False,1804,0.9403,0.9547,"court, supreme, judge, law, federal, justice, senate, attorney, legal, immigration, department, order"
+3,4761,0.2411,False,87,0.9804,0.9661,"tax, obamacare, house, senate, healthcare, republicans, republican, health, legislation, budget, congress, insurance"
+0,4727,0.2562,False,949,0.9321,0.9568,"police, killed, islamic, attack, myanmar, attacks, militants, authorities, forces, rohingya, muslim, security"
+1,4254,0.2468,False,1221,0.9664,0.9682,"iran, syria, israel, syrian, saudi, al, islamic, iraq, united, military, arabia, jerusalem"
+6,3749,0.1094,False,844,0.9886,0.9772,"party, minister, parliament, eu, government, european, opposition, merkel, coalition, catalan, spain, election"
