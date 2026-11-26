@@ -58,7 +58,25 @@ def _fingerprint_file() -> Path:
 def data_fingerprint() -> str:
     "Short hash of clean_fingerprint.json: changes whenever Person 1 changes the cleaned data."
     f = _fingerprint_file()
-    return hashlib.sha256(f.read_bytes()).hexdigest()[:16] if f.exists() else "missing"
+    if not f.exists():
+        return "missing"
+    content = f.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()[:16]
+
+
+def _matches_data_fingerprint(fingerprint: str) -> bool:
+    "Accept current fingerprints and legacy hashes made before normalizing line endings."
+    f = _fingerprint_file()
+    if not f.exists():
+        return fingerprint == "missing"
+    content = f.read_bytes()
+    normalized = content.replace(b"\r\n", b"\n")
+    candidates = {
+        hashlib.sha256(normalized).hexdigest()[:16],
+        hashlib.sha256(content).hexdigest()[:16],
+        hashlib.sha256(normalized.replace(b"\n", b"\r\n")).hexdigest()[:16],
+    }
+    return fingerprint in candidates
 
 
 def _ids_hash(doc_ids) -> str:
@@ -188,7 +206,7 @@ def build_embeddings(sample: int | None = None, *, batch_size: int | None = None
     paths = artifact_paths(sample)
     if not rebuild and paths["meta"].exists():
         meta = json.loads(paths["meta"].read_text())
-        if meta.get("data_fingerprint") == data_fingerprint() and paths["vectors"].exists():
+        if _matches_data_fingerprint(meta.get("data_fingerprint", "")) and paths["vectors"].exists():
             log(f"{paths['vectors'].name} is up to date ({meta['n_docs']:,} articles); use rebuild=True to redo")
             return meta
         log("cleaned data changed since the cache was built: rebuilding")
@@ -246,7 +264,7 @@ def load_embeddings(sample: int | None = None, check: bool = True) -> tuple[np.n
     """All cached vectors (float32) and their doc_ids (sorted). Raises StaleEmbeddingsError if the cleaned
     data changed since they were built (``check=False`` skips this)."""
     meta, paths = load_meta(sample), artifact_paths(sample)
-    if check and meta["data_fingerprint"] != data_fingerprint():
+    if check and not _matches_data_fingerprint(meta["data_fingerprint"]):
         raise StaleEmbeddingsError(
             f"{paths['vectors'].name} was built from another version of the cleaned data "
             f"({meta['data_fingerprint']} vs {data_fingerprint()}). Rebuild: python scripts/compute_embeddings.py")

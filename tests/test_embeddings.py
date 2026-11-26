@@ -1,4 +1,8 @@
-"""Unit tests for fake_news.features.embeddings, with a fake encoder (no model download, no GPU)."""
+"""Unit tests for fake_news.features.embeddings: the embedding cache (with a fake encoder: no model download,
+no GPU) and the logistic-regression classifier (on synthetic data)."""
+
+import hashlib
+import json
 
 import numpy as np
 import pandas as pd
@@ -68,6 +72,25 @@ def test_cache_is_reused_and_detects_stale_data(env):
         emb.load_embeddings()
     emb.build_embeddings(encoder=enc, log=lambda *_: None)
     assert enc.calls == 2
+
+
+def test_fingerprint_ignores_line_endings_and_accepts_legacy_hash(env):
+    fp = env["fp"]
+    lf_content = fp.read_bytes()
+    lf_fingerprint = emb.data_fingerprint()
+    crlf_content = lf_content.replace(b"\n", b"\r\n")
+    fp.write_bytes(crlf_content)
+    assert emb.data_fingerprint() == lf_fingerprint
+
+    enc = FakeEncoder()
+    meta = emb.build_embeddings(encoder=enc, log=lambda *_: None)
+    meta["data_fingerprint"] = hashlib.sha256(crlf_content).hexdigest()[:16]
+    emb.artifact_paths()["meta"].write_text(json.dumps(meta))
+    fp.write_bytes(lf_content)
+
+    emb.build_embeddings(encoder=enc, log=lambda *_: None)
+    emb.load_embeddings()
+    assert enc.calls == 1
 
 
 def test_sample_is_stored_separately(env):
