@@ -251,6 +251,11 @@ neighbours on their own as a classifier on val, to show how informative they are
 design above was chosen ([reasons](reports/minhash/LSH_FEATURES_DESIGN.md)). It only uses val, writes no
 predictions, and saves its tables to `reports/lsh_features/voting_<regime>_*`.
 
+**Evaluation** (`scripts/evaluate_lsh.py`, ~35 min the first time, then cached): LSH against exact Jaccard (recall,
+false positives, S-curves, runtime) on a 3,000-article sample and on the full data, the feature index against exact
+search, and a leakage audit of `split_grouped` on val. Tables in `reports/minhash/lsh_eval_*` and `leakage_audit_*`;
+all parameters, key numbers and limitations in [REPORT_NOTES.md](reports/minhash/REPORT_NOTES.md).
+
 ### Paths and constants
 
 ```python
@@ -364,13 +369,15 @@ Unit tests on small examples, plus checks of your real data against the referenc
 ├── notebooks/          00-how-to-use, 01-data-analysis, 02-data-cleaning, 03-embeddings, 04-minhash-lsh
 ├── reports/
 │   ├── cleaning/       Cleaning log, DECISIONS.md (in git)
-│   ├── minhash/        Near-duplicate statistics, LSH feature design and sanity checks, note on cleaning residue
+│   ├── minhash/        Near-duplicate statistics, LSH feature design and sanity checks, LSH evaluation,
+│   │                   REPORT_NOTES.md, note on cleaning residue
 │   ├── lsh_features/   Neighbour voting analysis on val (how informative the neighbours are)
 │   └── figures/        Figures for the report
 ├── scripts/            prepare_data.py (data), compute_embeddings.py (embeddings),
 │                       find_near_duplicates.py + find_paraphrases.py (groups), build_grouped_split.py,
 │                       build_lsh_features.py (LSH features),
-│                       run_model_b.py (neighbour voting analysis, not a pipeline model)
+│                       run_model_b.py (neighbour voting analysis, not a pipeline model),
+│                       evaluate_lsh.py (LSH vs exact Jaccard, leakage audit)
 ├── src/fake_news/
 │   ├── config.py       Paths, seed, split fractions
 │   ├── data/           load.py, clean.py, markers.py (rules + decisions), split.py, integrity.py
