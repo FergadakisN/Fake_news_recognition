@@ -1,104 +1,71 @@
 group_id,size,n_fake,mixed,tier,example_title
 216,40,40,False,minhash,"Syrian War Report - October 28, 2016: Militants Make Do-Or-Die Attempt to Break Aleppo Siege"
-6152,35,0,False,embedding,"Lebanon emerges from crisis with Iran on top, but risks remain"
 1352,26,26,False,minhash,Testimonial - 'I can focus better' from Kate
 114,20,20,False,minhash,CNN: One voter can make a difference by voting repeatedly
-7066,16,14,True,both,New emails under review in Clinton case emerged from Weiner probe
-297,15,0,False,embedding,Hawaii renews bid to narrow Trump travel ban
+8295,15,0,False,embedding,Lebanon's Hariri to visit Egypt on Tuesday: Hariri's office
 3540,13,13,False,minhash,"BULGARIA: Nearly l,000 Muslim freeloaders rebel over ""bad food and delays in giving them status to e"
 4949,13,13,False,minhash,Trump's Twitter Access Revoked - The Onion
-21495,12,0,False,both,Factbox: Trump fills top jobs for his administration
-5205,12,0,False,embedding,Turkish police arrest 15 senior military officers in Gulen probe: Anadolu
+21495,12,0,False,both+containment,Factbox: Trump fills top jobs for his administration
 3141,11,11,False,minhash,Get Ready For Civil Unrest: Survey Finds That Most Americans Are Concerned About Election Violence
 1469,11,11,False,minhash,"Colin Powell (Pronounced ""Colon Pao"") Endorses Hillary Clinton"
-12960,10,0,False,both,"Two Reuters journalists arrested in Myanmar, face official secrets charges"
-9807,10,0,False,embedding,Senator talks all night as Democrats fight Trump court nominee
 8788,10,10,False,minhash,What Happens If Trump Refuses To Concede Election - The Onion
-10231,9,0,False,both,Behind the Biden hype
-2052,9,9,False,both,Selling 'Regime Change' Wars to the Masses
-13102,9,9,False,embedding,November 10: Daily Contrarian Reads
 17576,9,9,False,minhash,The Media Hysteria And Dishonesty On Trump Has Backfired-Mainstreaming The Dissident Right
 3946,9,0,False,embedding,Russian bombers hit militant targets in Syria's Deir al-Zor: agencies
+13102,9,9,False,embedding,November 10: Daily Contrarian Reads
+10231,9,0,False,both+containment,Behind the Biden hype
+2052,9,9,False,both+containment,Selling 'Regime Change' Wars to the Masses
 24117,8,7,True,both,BOMBSHELL: 2006 Audio Emerges Of Hillary Clinton Proposing Rigging Palestine Election
-2677,8,8,False,both,FBI Reopens Clinton Investigation As New Emails Found
-497,8,0,False,embedding,FACTBOX: About 6.1 million without power in U.S. Southeast after Irma: utilities
-3350,7,6,True,both,WHOA! FBI'S COMEY DEFIED DOJ'S LORETTA LYNCH In Sending Letter To Congress...This Just Got Uglier!
-504,7,0,False,embedding,Clinton leads Trump 48-43 percent in Washington Post-ABC tracking poll
-587,7,7,False,both,November 11: Daily Contrarian Reads
-20633,6,1,True,embedding,Sentencing of ex-House speaker Hastert delayed until April
-10520,6,1,True,embedding,Comey to confirm Trump pressured him on Flynn investigation: CNN
-20107,4,2,True,embedding,Trump Has Meltdown Over Kasich And Cruz Joining Forces To Destroy Him
-5636,3,2,True,embedding,Report: Melania and Barron Trump Will Move to the White House This Summer
+17063,7,0,False,both+containment,Factbox: Contenders for senior jobs in Trump's administration
+587,7,7,False,both+containment,November 11: Daily Contrarian Reads
+18082,7,7,False,minhash,21 Things We've Learned About Hillary Clinton from Wikileaks That the MSM Won't Share...But YOU Can!
+9156,7,7,False,minhash,Brother of Clinton's Campaign Chair is an Active Foreign Agent on the Saudi Arabian Payroll
+931,7,7,False,both,Assange: Clinton Campaign Tried To Hack WikiLeaks
+9099,7,7,False,both+containment,21 THINGS WE'VE LEARNED ABOUT HILLARY CLINTON FROM WIKILEAKS THAT THE MSM WON'T SHARE...BUT YOU CAN!
+3873,7,7,False,both,"The Failure of Democracy, How The Oligarchs Plan To Steal The Election"
+6208,7,0,False,both+containment,Contenders for senior jobs in Trump's administration
+3510,7,7,False,minhash,Dennis Kucinich's Extraordinary Warning on D.C.'s Think Tank Warmongers
+7066,3,2,True,both,New emails under review in Clinton case emerged from Weiner probe
 1485,3,2,True,both,Trump cuts off fundraising events for Republican Party
-5291,3,1,True,embedding,Alabama's Top Judge Faces Ethics Charges Over Gay-Marriage Order
-28951,3,2,True,embedding,BALL FAMILY MEMBER Reveals SICK Reason LaVar Ball Allegedly Wouldn't Let His Sons See Their Mother A
-31455,3,1,True,embedding,MALIA OBAMA TO ATTEND UNIVERSITY With 5.9% Acceptance Rate...Black Privilege?
-1545,3,1,True,both,JUST IN: UK LEADER Who Criticized President Trump For Tweeting About ISLAMIC EXTREMISTS Is Victim Of
-15411,3,1,True,embedding,Greens Question Trump's Victory
-10506,3,2,True,embedding,It's Happening: FBI Carries Out Predawn Raid On Trump Associate's Home
-603,3,2,True,embedding,AWESOME! President Trump Gives Fatherly Advice About 'The Road of Life' to UCLA Basketball Players
-31001,2,1,True,embedding,"BREAKING AUDIO RELEASED: Paul Ryan Caught On Tape: ""I am not going to defend Donald Trump...not now,"
-31244,2,1,True,embedding,HOUSE ISSUES SUBPOENAS for Key Obama Administration Officials: Unmasking the Unmaskers [Video]
+20107,3,2,True,embedding,Trump Has Meltdown Over Kasich And Cruz Joining Forces To Destroy Him
 31193,2,1,True,embedding,Fox News Poll: Clinton leads Trump by three points
-51316,2,1,True,embedding,Federal Agents Will Be Watching You Vote on Election Day
-30393,2,1,True,minhash,U.S. militia girds for trouble as presidential election nears
-29657,2,1,True,embedding,NAACP Members Arrested For Protesting Trump's Racist Attorney General Pick
-29127,2,1,True,embedding,The World Speaks Out On Trump - Top Foreign Diplomats Unite Against Him
+28204,2,1,True,embedding,Re: DOJ AG Loretta Lynch Advised FBI Director to Keep New Emails from Congress
+61377,2,1,True,embedding,CHECKMATE! PUTIN Offers Up Proof Of Trump's Innocence [Video]
+57477,2,1,True,embedding,U.S. official backs Trump version on Comey firing timing
 28376,2,1,True,embedding,ALBUM SALES SKYROCKET! A Star Is Born With One Awesome Grammys Dress
-25035,2,1,True,embedding,"PRESIDENT TRUMP'S HEARTFELT FATHER'S DAY PROCLAMATION: ""Thank the men in our lives who have taken on"
 28993,2,1,True,embedding,"JUDGE JEANINE SLAMS HILLARY IN EPIC OPENING STATEMENT: ""Snap out of it!""...""You're A Two Time Loser!"
+30393,2,1,True,minhash,U.S. militia girds for trouble as presidential election nears
+31001,2,1,True,embedding,"BREAKING AUDIO RELEASED: Paul Ryan Caught On Tape: ""I am not going to defend Donald Trump...not now,"
+48248,2,1,True,embedding,CNN Cuts Feed After Senator Objects to Clinton Foundation Atty Joining 'Independent' Counsel
+43593,2,1,True,minhash,"In hats and t-shirts, Trump fans rally in Jerusalem's Old City"
+31455,2,1,True,embedding,MALIA OBAMA TO ATTEND UNIVERSITY With 5.9% Acceptance Rate...Black Privilege?
+51316,2,1,True,embedding,Federal Agents Will Be Watching You Vote on Election Day
+35276,2,1,True,minhash,JAMES COMEY'S Bombshell Pre-Testimony Statement
 37014,2,1,True,minhash,"WHY DEMOCRATS KEEP LOSING: Rep. Hakeem Jeffries Calls Trump Voters ""White Supremacists"" [Video]"
-33360,2,1,True,embedding,Trump Tweets Support for L.L. Bean Against Leftist Boycott
-23637,2,1,True,embedding,Investigators Into US-Russia Ties Turn Attention To Flynn's Business Partner
+37348,2,1,True,embedding+containment,BREAKING: LEFTIST DEMOCRAT MAYOR ORDERED BALTIMORE POLICE TO STAND DOWN [Video]
+38173,2,1,True,embedding,Judge presiding over Michael Flynn criminal case is recused: court
 51314,2,1,True,embedding,Donald Trump Attacks 'Sleepy Eyes Chuck Todd' for 'Phony' Russia Story
 51254,2,1,True,minhash,Syrian political opposition says hopes Clinton wins U.S. presidency
 49176,2,1,True,embedding,Europe Hopes for Clinton Win for More Deals With Iran
-55319,2,1,True,embedding,Getting North Korea to give up nuclear bomb probably 'lost cause': U.S. spy chief
-48248,2,1,True,embedding,CNN Cuts Feed After Senator Objects to Clinton Foundation Atty Joining 'Independent' Counsel
-47088,2,1,True,embedding,Palestinian Protesters Attack US Embassy in Lebanon
-45944,2,1,True,embedding,Priebus: Take Trump Seriously When he Calls Media 'The Enemy'
-43593,2,1,True,minhash,"In hats and t-shirts, Trump fans rally in Jerusalem's Old City"
-35276,2,1,True,minhash,JAMES COMEY'S Bombshell Pre-Testimony Statement
-57477,2,1,True,embedding,U.S. official backs Trump version on Comey firing timing
-61377,2,1,True,embedding,CHECKMATE! PUTIN Offers Up Proof Of Trump's Innocence [Video]
-38173,2,1,True,embedding,Judge presiding over Michael Flynn criminal case is recused: court
-37435,2,1,True,embedding,Republican Ben Carson opts against job in Trump Cabinet
-37348,2,1,True,embedding,BREAKING: LEFTIST DEMOCRAT MAYOR ORDERED BALTIMORE POLICE TO STAND DOWN [Video]
-54230,2,1,True,embedding,BREAKING: C.I.A. Knew Russia Wanted Trump WAY Before Election; NOTHING Was Done
-36544,2,1,True,embedding,Paul Ryan Wants To Make This Healthcare Nightmare A Reality Again
-44274,2,1,True,embedding,Pence Plane Scare
-13397,2,1,True,minhash,"AWESOME! GREG GUTFELD: World hatred of Trump is their problem, not ours! [Video]"
-23480,2,1,True,embedding,TransCanada Officially Files $15 Billion Lawsuit Against U.S. For Rejecting KXL Pipline
-5952,2,1,True,embedding,Prince Died From Accidental Overdose of Opioid Painkiller
-11074,2,1,True,embedding,"They Asked Hillary If Trump Is Qualified To Be President, Her Answer Was Epic"
-8566,2,1,True,embedding,House Intelligence Chair Nunes: Surveillance of Trump Transition Team 'Incidentally Collected'
-7582,2,1,True,minhash,Mark Levin: Open Letter to CNN's Brian Stelter
-7139,2,1,True,embedding,Trump chooses pro wrestling magnate Linda McMahon to head SBA
-7103,2,1,True,embedding,"WHOA! FIRST LADY MELANIA Makes Classy, Yet Blistering Response To Kathy Griffin's ISIS Inspired Phot"
-6925,2,1,True,embedding,HOW OBAMA'S BROKEN U.S. Deportation Process and Canada's Open-Door Immigration Policy Are Responsibl
-5388,2,1,True,embedding,Supreme Court will hear case on bathroom rules for transgender students
-22519,2,1,True,embedding,"Lansing, Michigan, Will No Longer Declare Itself a 'Sanctuary City'"
-5030,2,1,True,embedding,President Obama Just Put Republicans In Their Place With 36 Words From The Constitution
-4937,2,1,True,embedding,MAJOR OUTDOOR CLOTHING COMPANY With Ties To Human Trafficking Wages War On President Trump Over Outr
-4436,2,1,True,embedding,PRESIDENT TRUMP Looking at Executive Action on Obamacare
-3331,2,1,True,embedding,Nasty: Madonna Shares Pubic Hair Pic to Promote Anti-Trump March
-2212,2,1,True,embedding,Venezuela crisis enters dangerous phase as Maduro foes go militant
-1530,2,1,True,embedding,BOOM! TX Governor Will CUT FUNDING To County Where Sheriff Of Sanctuary City Refuses To Cooperate Wi
-11384,2,1,True,embedding,Iran Warns President-Elect Trump Not To Mess With Their Sweetheart Nuclear Deal From Obama
-11506,2,1,True,embedding,Attorney General Jeff Sessions Seeks Resignations of 46 US Attorneys
-11842,2,1,True,embedding,David Letterman Shreds The 'Goon' In The White House: 'It Makes Me Sick' That Trump Represents Us
-12754,2,1,True,embedding,Commentary: Trump can't fight Islamic State without wading into Syria's war
-12967,2,1,True,embedding,Federal Court Strikes Down Racist Texas Voter ID Law
-13029,2,1,True,embedding,"In Break With Precedent, Obama Envoys Are Denied Extensions Past Inauguration Day"
-13083,2,1,True,embedding,"Putin says could meet Trump in Slovenia, but choice not Moscow's alone"
+25035,2,1,True,embedding,"PRESIDENT TRUMP'S HEARTFELT FATHER'S DAY PROCLAMATION: ""Thank the men in our lives who have taken on"
 14253,2,1,True,embedding,Kicking Money Out of Politics: Trump Boots Koch Brother from Golf Course
+23637,2,1,True,embedding,Investigators Into US-Russia Ties Turn Attention To Flynn's Business Partner
+11384,2,1,True,embedding,Iran Warns President-Elect Trump Not To Mess With Their Sweetheart Nuclear Deal From Obama
+2212,2,1,True,embedding,Venezuela crisis enters dangerous phase as Maduro foes go militant
+3331,2,1,True,embedding,Nasty: Madonna Shares Pubic Hair Pic to Promote Anti-Trump March
+4436,2,1,True,embedding+containment,PRESIDENT TRUMP Looking at Executive Action on Obamacare
+4937,2,1,True,embedding,MAJOR OUTDOOR CLOTHING COMPANY With Ties To Human Trafficking Wages War On President Trump Over Outr
+5952,2,1,True,embedding,Prince Died From Accidental Overdose of Opioid Painkiller
+6925,2,1,True,embedding,HOW OBAMA'S BROKEN U.S. Deportation Process and Canada's Open-Door Immigration Policy Are Responsibl
+7139,2,1,True,embedding,Trump chooses pro wrestling magnate Linda McMahon to head SBA
+7582,2,1,True,minhash,Mark Levin: Open Letter to CNN's Brian Stelter
+11506,2,1,True,embedding,Attorney General Jeff Sessions Seeks Resignations of 46 US Attorneys
+21475,2,1,True,embedding,U.S. lawmakers raise privacy concerns over new hacking rules
+11842,2,1,True,embedding,David Letterman Shreds The 'Goon' In The White House: 'It Makes Me Sick' That Trump Represents Us
+13029,2,1,True,embedding,"In Break With Precedent, Obama Envoys Are Denied Extensions Past Inauguration Day"
+13397,2,1,True,minhash,"AWESOME! GREG GUTFELD: World hatred of Trump is their problem, not ours! [Video]"
 14503,2,1,True,minhash,Hillary Clinton enjoys solid lead in early voting: Reuters/Ipsos poll
-14643,2,1,True,embedding,"John McCain Says There's A Much Bigger Threat To Us Than ISIS, And Trump Will HATE It"
-15288,2,1,True,embedding,"BREAKING: Flynn Will Plead the Fifth, Refuse to Produce Documents"
 15443,2,1,True,minhash,JUDGE JEANINE IS FURIOUS! RINO's Are Plotting To Take Down President Trump...Cowardly GOP Sitting Ba
 16144,2,1,True,embedding,Clinton's charity confirms Qatar's $1 million gift while she was at State Dept
 17159,2,1,True,minhash,"TRUMP'S LAWYER DESTROYS #ChrisWallace In Heated Exchange: ""No Chris, I deal with fact and law"" [Vide"
 17312,2,1,True,embedding,"REPORT: ""TOXIC"" MEGYN KELLY Just Got Bad News From FOX News After Disastrous Start At NBC"
-18772,2,1,True,embedding,Publisher Announces Books By The Obamas Are Officially On The Way
-21475,2,1,True,embedding,U.S. lawmakers raise privacy concerns over new hacking rules
 61663,2,1,True,embedding,"Three in Florida, Virginia charged with voter fraud"

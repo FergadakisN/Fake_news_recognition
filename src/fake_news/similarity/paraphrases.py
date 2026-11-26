@@ -130,8 +130,8 @@ def merge_groups(doc_ids, minhash_groups: pd.Series, pairs: pd.DataFrame) -> pd.
 
 
 def add_pair_info(pairs: pd.DataFrame, df: pd.DataFrame, minhash_groups: pd.Series) -> pd.DataFrame:
-    """Add the 3-word exact Jaccard (the MinHash tier's measure), labels, lengths and whether MinHash
-    already put the two articles in one group. ``df`` needs ``doc_id, content, n_words, is_fake``."""
+    """Add the 3-word exact Jaccard (the MinHash tier's measure), the containment, labels, lengths and whether
+    MinHash already put the two articles in one group. ``df`` needs ``doc_id, content, n_words, is_fake``."""
     from fake_news.similarity.shingles import jaccard, shingle_ids
 
     d = df.set_index("doc_id")
@@ -139,6 +139,11 @@ def add_pair_info(pairs: pd.DataFrame, df: pd.DataFrame, minhash_groups: pd.Seri
     sh = {i: shingle_ids(t) for i, t in d["content"].loc[need].items()}
     out = pairs.copy()
     out["jaccard"] = [jaccard(sh[a], sh[b]) for a, b in zip(out["doc_a"], out["doc_b"])]
+    # containment: share of the SHORTER text's shingles that are also in the other text. High containment with
+    # low Jaccard = one text contains the other (truncated/extended copy); Jaccard is low only because of length.
+    inter = [len(np.intersect1d(sh[a], sh[b], assume_unique=True)) for a, b in zip(out["doc_a"], out["doc_b"])]
+    smaller = [max(min(len(sh[a]), len(sh[b])), 1) for a, b in zip(out["doc_a"], out["doc_b"])]
+    out["containment"] = np.array(inter) / np.array(smaller)
     out["same_minhash_group"] = minhash_groups.loc[out["doc_a"]].to_numpy() == minhash_groups.loc[out["doc_b"]].to_numpy()
     for col, src in (("a", "doc_a"), ("b", "doc_b")):
         out[f"is_fake_{col}"] = d["is_fake"].loc[out[src]].to_numpy()
@@ -147,7 +152,29 @@ def add_pair_info(pairs: pd.DataFrame, df: pd.DataFrame, minhash_groups: pd.Seri
     return out
 
 
-TIERS = ("none", "minhash", "embedding", "both")
+COSINE_THRESHOLD = 0.92      # an embedding pair is a link at cosine >= 0.92 ...
+CONTAINMENT_BAND_LOW = 0.90  # ... or at 0.90 <= cosine < 0.92 if
+CONTAINMENT_MIN = 0.7        # ... its 3-word shingle containment is >= 0.7 (a copy, not a topic neighbour)
+TIERS = ("none", "minhash", "embedding", "embedding+containment", "both", "both+containment")
+
+
+def select_links(pairs: pd.DataFrame, threshold: float = COSINE_THRESHOLD, band_low: float = CONTAINMENT_BAND_LOW,
+                 containment_min: float = CONTAINMENT_MIN) -> pd.DataFrame:
+    """The embedding pairs that become links, with the rule that admitted each (column ``rule``).
+
+    - ``"embedding"``: cosine >= ``threshold`` (0.92);
+    - ``"containment"``: ``band_low`` <= cosine < ``threshold`` (0.90-0.92) and 3-word shingle containment
+      >= ``containment_min`` (0.7). Below 0.92 most pairs are different articles on one news topic, which would
+      chain topics together; requiring that one text largely contains the other keeps only the copies
+      (truncated, extended or edited) that sit just below the cosine threshold.
+
+    ``pairs`` needs ``cosine`` and ``containment`` (from :func:`add_pair_info`).
+    """
+    by_cosine = pairs["cosine"] >= threshold
+    by_containment = (pairs["cosine"] >= band_low) & ~by_cosine & (pairs["containment"] >= containment_min)
+    out = pairs[by_cosine | by_containment].copy()
+    out["rule"] = np.where(by_cosine[by_cosine | by_containment], "embedding", "containment")
+    return out
 
 
 def two_tier_groups(doc_ids, minhash_groups: pd.Series, pairs: pd.DataFrame) -> pd.DataFrame:
@@ -156,9 +183,13 @@ def two_tier_groups(doc_ids, minhash_groups: pd.Series, pairs: pd.DataFrame) -> 
     ``tier`` describes the whole group (the same for all its members):
 
     - ``"none"``: a singleton (no near-duplicate);
-    - ``"minhash"``: exactly one MinHash group, not changed by the embedding pairs;
-    - ``"embedding"``: linked only by embedding pairs (paraphrases MinHash did not see);
-    - ``"both"``: one or more MinHash groups enlarged or joined by embedding pairs.
+    - ``"minhash"``: exactly one MinHash group, not changed by the embedding links;
+    - ``"embedding"``: linked only by embedding links (copies and paraphrases MinHash did not see);
+    - ``"both"``: one or more MinHash groups enlarged or joined by embedding links.
+
+    ``"+containment"`` is appended (``"embedding+containment"``, ``"both+containment"``) when at least one link
+    admitted by the containment rule (``pairs["rule"] == "containment"``, see :func:`select_links`) connects
+    articles from different MinHash groups inside the group, i.e. the rule changed the group.
     """
     merged = merge_groups(doc_ids, minhash_groups, pairs)
     mh = minhash_groups.reindex(merged.index)
@@ -167,11 +198,18 @@ def two_tier_groups(doc_ids, minhash_groups: pd.Series, pairs: pd.DataFrame) -> 
     per = d.groupby("group_id").agg(size=("mh", "size"),
                                     n_mh_groups=("mh", lambda s: s[d.loc[s.index, "in_mh_group"]].nunique()),
                                     n_in_mh=("in_mh_group", "sum"))
-    tier = np.select([per["size"] == 1, per["n_mh_groups"] == 0,
-                      (per["n_mh_groups"] == 1) & (per["n_in_mh"] == per["size"])],
-                     ["none", "embedding", "minhash"], default="both")
+    tier = pd.Series(np.select([per["size"] == 1, per["n_mh_groups"] == 0,
+                                (per["n_mh_groups"] == 1) & (per["n_in_mh"] == per["size"])],
+                               ["none", "embedding", "minhash"], default="both"), index=per.index)
+
+    if "rule" in pairs.columns:
+        c = pairs[pairs["rule"] == "containment"]
+        changing = c[mh.loc[c["doc_a"]].to_numpy() != mh.loc[c["doc_b"]].to_numpy()]  # not inside one MinHash group
+        marked = merged.loc[changing["doc_a"]].unique()
+        tier.loc[marked] = tier.loc[marked] + "+containment"
+
     out = merged.to_frame()
-    out["tier"] = out["group_id"].map(pd.Series(tier, index=per.index))
+    out["tier"] = out["group_id"].map(tier)
     return out.reset_index()
 
 
@@ -182,3 +220,31 @@ def save_two_tier_groups(groups: pd.DataFrame, path=None) -> "Path":
     path = path or GROUPS_CSV
     groups[["doc_id", "group_id", "tier"]].sort_values("doc_id").to_csv(path, index=False)
     return path
+
+
+# ---- what kind of link did the embedding tier add? (descriptive only; grouping uses cosine alone) ----------
+COPY_CONTAINMENT = 0.8        # >= 0.8 of the shorter text's shingles are in the other text: a copy
+PARAPHRASE_CONTAINMENT = 0.3  # < 0.3: little shared wording: a paraphrase
+TRUNCATION_RATIO = 1.5        # a copy whose texts differ in length by >= 1.5x: truncated / extended copy
+LINK_TYPES = ("minhash", "truncated_copy", "edited_copy", "partial_overlap", "paraphrase")
+
+
+def link_type(pairs: pd.DataFrame) -> pd.Series:
+    """Classify embedding pairs (needs ``same_minhash_group, containment, n_words_a, n_words_b`` from
+    :func:`add_pair_info`):
+
+    - ``minhash``: MinHash already put the two in one group (the embedding link adds nothing);
+    - ``truncated_copy``: one text contains the other (containment >= 0.8) but is >= 1.5x longer or shorter.
+      MinHash misses these because Jaccard divides by the union, which the extra length inflates;
+    - ``edited_copy``: containment >= 0.8 at similar length (Jaccard just below MinHash's 0.7);
+    - ``partial_overlap``: 0.3 <= containment < 0.8 (shared passages: updated versions, long quotes);
+    - ``paraphrase``: containment < 0.3: the same story in other words.
+    """
+    ratio = (np.maximum(pairs["n_words_a"], pairs["n_words_b"])
+             / np.maximum(np.minimum(pairs["n_words_a"], pairs["n_words_b"]), 1))
+    c = pairs["containment"]
+    kind = np.select(
+        [pairs["same_minhash_group"], (c >= COPY_CONTAINMENT) & (ratio >= TRUNCATION_RATIO),
+         c >= COPY_CONTAINMENT, c >= PARAPHRASE_CONTAINMENT],
+        ["minhash", "truncated_copy", "edited_copy", "partial_overlap"], default="paraphrase")
+    return pd.Series(kind, index=pairs.index, name="link_type")

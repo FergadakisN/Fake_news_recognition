@@ -53,3 +53,47 @@ def test_two_tier_joining_two_minhash_groups_is_both():
     pairs = pd.DataFrame({"doc_a": [2], "doc_b": [3]})
     g = pp.two_tier_groups([1, 2, 3, 4], minhash, pairs)
     assert g["tier"].eq("both").all() and g["group_id"].eq(1).all()
+
+
+def test_link_type_separates_copies_from_paraphrases():
+    pairs = pd.DataFrame({
+        "same_minhash_group": [True, False, False, False, False],
+        "containment":        [0.95, 0.95, 0.90, 0.50, 0.10],
+        "n_words_a":          [300, 1600, 300, 300, 300],
+        "n_words_b":          [310, 220, 320, 280, 290],
+    })
+    assert pp.link_type(pairs).tolist() == ["minhash", "truncated_copy", "edited_copy", "partial_overlap", "paraphrase"]
+
+
+def test_containment_of_a_truncated_copy():
+    from fake_news.similarity.shingles import jaccard, shingle_ids
+
+    long = " ".join(f"word{i}" for i in range(200))          # 198 shingles
+    short = " ".join(f"word{i}" for i in range(50))           # its first 50 words: 48 shingles, all in `long`
+    other = " ".join(f"other{i}" for i in range(50))
+    df = pd.DataFrame({"doc_id": [1, 2, 3], "content": [long, short, other], "n_words": [200, 50, 50],
+                       "is_fake": [1, 1, 0]})
+    pairs = pd.DataFrame({"doc_a": [1, 1], "doc_b": [2, 3], "cosine": [0.91, 0.91]})
+    info = pp.add_pair_info(pairs, df, pd.Series({1: 1, 2: 2, 3: 3})).set_index("doc_b")
+    assert info.at[2, "containment"] == 1.0                    # the short text is fully contained
+    assert info.at[2, "jaccard"] == jaccard(shingle_ids(long), shingle_ids(short)) < 0.3   # but Jaccard is low
+    assert info.at[3, "containment"] == 0.0
+    assert pp.link_type(info.reset_index()).tolist() == ["truncated_copy", "paraphrase"]
+
+
+def test_select_links_containment_rule():
+    pairs = pd.DataFrame({"doc_a": [1, 2, 3, 4], "doc_b": [5, 6, 7, 8],
+                          "cosine": [0.95, 0.91, 0.91, 0.89], "containment": [0.1, 0.75, 0.5, 0.99]})
+    links = pp.select_links(pairs)
+    # 0.95: cosine rule; 0.91 with containment 0.75: containment rule; 0.91 / 0.5 and 0.89 / 0.99: not linked
+    assert links[["doc_a", "rule"]].values.tolist() == [[1, "embedding"], [2, "containment"]]
+
+
+def test_tier_records_the_containment_rule():
+    minhash = pd.Series({1: 1, 2: 1, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7})
+    pairs = pd.DataFrame({"doc_a": [2, 4, 6, 1], "doc_b": [3, 5, 7, 2],
+                          "rule": ["containment", "containment", "embedding", "containment"]})
+    g = pp.two_tier_groups(range(1, 8), minhash, pairs).set_index("doc_id")
+    assert g.at[3, "tier"] == "both+containment"               # MinHash group {1,2} enlarged by a containment link
+    assert g.at[4, "tier"] == g.at[5, "tier"] == "embedding+containment"
+    assert g.at[6, "tier"] == "embedding"
