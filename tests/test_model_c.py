@@ -33,7 +33,7 @@ def make_corpus(n_per_topic=60, seed=0):
 @pytest.fixture(scope="module")
 def fitted():
     texts, y, topics = make_corpus()
-    model = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10).fit(texts, y)
+    model = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10, cluster_on="svd").fit(texts, y)
     return model, texts, y, topics
 
 
@@ -64,8 +64,8 @@ def test_vocabulary_is_learned_from_training_texts_only(fitted):
 
 def test_same_seed_gives_same_model():
     texts, y, _ = make_corpus()
-    a = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10).fit(texts, y).predict_proba(texts)
-    b = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10).fit(texts, y).predict_proba(texts)
+    a = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10, cluster_on="svd").fit(texts, y).predict_proba(texts)
+    b = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10, cluster_on="svd").fit(texts, y).predict_proba(texts)
     assert np.allclose(a, b)
 
 
@@ -91,3 +91,35 @@ def test_topic_only_uses_the_cluster_fake_share():
     share = np.array([0.1, 0.9, np.nan])
     p = mc.topic_only_proba(share, np.array([0, 1, 2, 1]), default=0.44)
     assert p.tolist() == [0.1, 0.9, 0.44, 0.9]
+
+
+def test_embeddings_space_clusters_on_the_embedding_vectors(monkeypatch):
+    texts, y, topics = make_corpus()
+    doc_ids = np.arange(len(texts)) + 1000
+    rng = np.random.default_rng(3)
+    centers = np.eye(3, 8)                                  # one direction per topic in an 8-d "embedding" space
+    vecs = centers[topics] + 0.05 * rng.standard_normal((len(texts), 8))
+    vecs /= np.linalg.norm(vecs, axis=1, keepdims=True)
+    lookup = dict(zip(doc_ids, vecs))
+    monkeypatch.setattr(mc, "embedding_vectors", lambda ids: np.stack([lookup[i] for i in ids]))
+
+    model = mc.ModelC(k=3, c=1.0, n_components=5, min_cluster_size=10).fit(texts, y, doc_ids)
+    labels = model.kmeans.labels_
+    assert model.kmeans.cluster_centers_.shape == (3, 8)    # clustered in the embedding space, not SVD
+    for k in range(3):
+        assert np.bincount(topics[labels == k]).max() == (labels == k).sum()
+    assert np.array_equal(model.assign(texts, doc_ids), labels)
+    p = model.predict_proba(texts, doc_ids)
+    assert p[y == 1].min() > 0.5 > p[y == 0].max()
+    assert len(model.top_terms(5)) == 3
+
+
+def test_embeddings_space_needs_doc_ids():
+    texts, y, _ = make_corpus(n_per_topic=20)
+    with pytest.raises(ValueError, match="doc_ids"):
+        mc.ModelC(k=3, n_components=5).fit(texts, y)
+
+
+def test_unknown_cluster_space_is_rejected():
+    with pytest.raises(ValueError, match="cluster_on"):
+        mc.ModelC(cluster_on="tfidf")

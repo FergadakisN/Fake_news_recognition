@@ -1,10 +1,11 @@
 {
   "regime": "grouped",
+  "cluster_on": "embeddings",
   "design": "compare",
   "k": 8,
   "c": 100.0,
-  "n_components": 200,
-  "explained_variance": 0.1546,
+  "cluster_dims": 384,
+  "svd_explained_variance": null,
   "tfidf_words": 47937,
   "min_cluster_size": 200,
   "fallback_clusters": 0,
@@ -23,11 +24,11 @@
   },
   "val": {
     "model_c": {
-      "roc_auc": 0.977,
-      "accuracy": 0.9233,
-      "f1": 0.9136,
-      "precision": 0.9142,
-      "recall": 0.9131
+      "roc_auc": 0.975,
+      "accuracy": 0.9212,
+      "f1": 0.911,
+      "precision": 0.9136,
+      "recall": 0.9085
     },
     "global_lr": {
       "c": 10.0,
@@ -39,21 +40,21 @@
     },
     "topic_only": {
       "k": 8,
-      "roc_auc": 0.7543,
-      "accuracy": 0.6884,
-      "f1": 0.5535,
-      "precision": 0.7607,
-      "recall": 0.4351
+      "roc_auc": 0.7116,
+      "accuracy": 0.6743,
+      "f1": 0.6446,
+      "precision": 0.6252,
+      "recall": 0.6653
     },
     "hybrid_avg": {
       "k": 8,
       "c": 100.0,
       "global_c": 10.0,
-      "roc_auc": 0.9817,
-      "accuracy": 0.9348,
-      "f1": 0.9265,
-      "precision": 0.9274,
-      "recall": 0.9256
+      "roc_auc": 0.9809,
+      "accuracy": 0.9301,
+      "f1": 0.9214,
+      "precision": 0.9194,
+      "recall": 0.9234
     }
   },
   "n": {
@@ -62,8 +63,8 @@
     "test": 9379
   },
   "seconds": {
-    "load": 0.5,
-    "features": 9.5,
-    "tuning": 16.7
+    "load": 0.6,
+    "features": 10.8,
+    "tuning": 22.2
   }
 }

@@ -1,0 +1,66 @@
+{
+  "regime": "cluster",
+  "cluster_on": "svd",
+  "design": "fixed",
+  "k": 8,
+  "c": 100.0,
+  "cluster_dims": 200,
+  "svd_explained_variance": 0.1531,
+  "tfidf_words": 49133,
+  "min_cluster_size": 200,
+  "fallback_clusters": 0,
+  "selection": "K and C fixed from grouped_summary.json",
+  "grid": {
+    "k": [
+      8
+    ],
+    "c": [
+      100.0
+    ]
+  },
+  "val": {
+    "model_c": {
+      "roc_auc": 0.9692,
+      "accuracy": 0.9082,
+      "f1": 0.8977,
+      "precision": 0.8977,
+      "recall": 0.8977
+    },
+    "global_lr": {
+      "c": 10.0,
+      "roc_auc": 0.9747,
+      "accuracy": 0.9218,
+      "f1": 0.9135,
+      "precision": 0.9071,
+      "recall": 0.92
+    },
+    "topic_only": {
+      "k": 8,
+      "roc_auc": 0.7655,
+      "accuracy": 0.725,
+      "f1": 0.7031,
+      "precision": 0.682,
+      "recall": 0.7255
+    },
+    "hybrid_avg": {
+      "k": 8,
+      "c": 100.0,
+      "global_c": 10.0,
+      "roc_auc": 0.9763,
+      "accuracy": 0.923,
+      "f1": 0.9145,
+      "precision": 0.9114,
+      "recall": 0.9177
+    }
+  },
+  "n": {
+    "train": 43326,
+    "val": 9392,
+    "test": 9807
+  },
+  "seconds": {
+    "load": 0.6,
+    "features": 10.7,
+    "tuning": 3.1
+  }
+}

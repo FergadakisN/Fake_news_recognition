@@ -2,15 +2,20 @@
 
     python scripts/run_model_c.py --regime grouped    # final split: compare K and C on val, pick the best
     python scripts/run_model_c.py --regime random     # keeps K and C chosen on grouped; only the split differs
+    python scripts/run_model_c.py --regime cluster    # same, on the held-out topic clusters
+    python scripts/run_model_c.py --regime grouped --cluster-on svd   # comparison: clusters on TF-IDF + SVD
 
 Design: with --design compare (default for "grouped", the final split) every K in {8, 16, 32} and C in
 {10, 30, 100} is scored on val and the Model C setting with the best val ROC-AUC is chosen. With
---design fixed (default for every other regime) K and C are read from reports/model_c/grouped_summary.json,
+--design fixed (default for every other regime) K and C are read from reports/model_c/grouped[__svd]_summary.json,
 so regimes differ only in the split.
 
+Cluster space (--cluster-on): "embeddings" (default; the 384-d sentence embeddings) or "svd" (TF-IDF reduced to 200
+dimensions with TruncatedSVD), kept as a comparison. The classifiers use TF-IDF in both cases.
+
 Steps (everything fitted on TRAIN only):
-    1. TF-IDF of content, TruncatedSVD to 200 dimensions, L2 normalisation
-    2. K-means on the train SVD vectors, for each K
+    1. TF-IDF of content (classifier features); cluster vectors: sentence embeddings, or TruncatedSVD of the TF-IDF
+    2. K-means on the train cluster vectors, for each K
     3. per C: a global logistic regression (the comparison) and one logistic regression per cluster
        (fallback to the global one for clusters with < 200 train articles or one class)
     4. scored on val next to two references: "topic_only" (P(fake) = fake share of the article's cluster in
@@ -21,11 +26,12 @@ Steps (everything fitted on TRAIN only):
 Test articles are predicted but never scored here (README rule 3: test is used once, at the end, for all models).
 
 Outputs:
-    reports/model_c/<regime>_tuning.csv        every (model, K, C) on val
-    reports/model_c/<regime>_clusters.csv      per cluster of the chosen K: size, fake share, fallback, top terms, val scores
-    reports/model_c/<regime>_summary.json      chosen setting, val metrics of Model C and the references, timings
-    data/processed/predictions/model_c__<regime>.csv               doc_id, split, prob_fake (val + test)
-    data/processed/predictions/model_c__<regime>__clusters.csv     doc_id, split, cluster (all articles)
+(<tag> is empty for embeddings and "__svd" for svd; <model> is model_c or model_c_svd)
+    reports/model_c/<regime><tag>_tuning.csv        every (model, K, C) on val
+    reports/model_c/<regime><tag>_clusters.csv      per cluster of the chosen K: size, fake share, fallback, top words, val scores
+    reports/model_c/<regime><tag>_summary.json      chosen setting, val metrics of Model C and the references, timings
+    data/processed/predictions/<model>__<regime>.csv               doc_id, split, prob_fake (val + test)
+    data/processed/predictions/<model>__<regime>__clusters.csv     doc_id, split, cluster (all articles)
 """
 
 import argparse
@@ -61,14 +67,19 @@ def main() -> int:
     ap.add_argument("--design", choices=("compare", "fixed"), default=None,
                     help=f"compare K and C on val, or keep the ones chosen on {DESIGN_REGIME} "
                          f"(default: compare for {DESIGN_REGIME}, fixed otherwise)")
+    ap.add_argument("--cluster-on", choices=mc.CLUSTER_SPACES, default="embeddings",
+                    help="vectors K-means runs on (default: embeddings)")
     args = ap.parse_args()
+    tag = "" if args.cluster_on == "embeddings" else f"__{args.cluster_on}"
+    model_name = "model_c" if args.cluster_on == "embeddings" else f"model_c_{args.cluster_on}"
     design = args.design or ("compare" if args.regime == DESIGN_REGIME else "fixed")
     if design == "compare":
         k_grid, c_grid = K_GRID, C_GRID
     else:
-        path = REPORT_DIR / f"{DESIGN_REGIME}_summary.json"
+        path = REPORT_DIR / f"{DESIGN_REGIME}{tag}_summary.json"
         if not path.exists():
-            sys.exit(f"{path} not found: run `python scripts/run_model_c.py --regime {DESIGN_REGIME}` first.")
+            sys.exit(f"{path} not found: run `python scripts/run_model_c.py --regime {DESIGN_REGIME} "
+                     f"--cluster-on {args.cluster_on}` first.")
         chosen = json.loads(path.read_text())
         k_grid, c_grid = (chosen["k"],), (chosen["c"],)
     timings = {}
@@ -77,16 +88,19 @@ def main() -> int:
     df = load_dataset(args.regime, columns=["content"])
     train, val, test = (df[df.split == s].reset_index(drop=True) for s in config.SPLIT_NAMES)
     ytr, yva = train.is_fake.to_numpy(), val.is_fake.to_numpy()
-    print(f"[{args.regime}, design {design}] train {len(train):,}  val {len(val):,}  test {len(test):,}")
+    print(f"[{args.regime}, clusters on {args.cluster_on}, design {design}] train {len(train):,}  val {len(val):,}  test {len(test):,}")
     timings["load"] = time.time() - t
 
     t = time.time()
     feats = mc.TopicFeatures()
     Xtr, Ztr = feats.fit_transform(train.content)
     Xva, Zva = feats.transform(val.content)
+    Xte, Zte = feats.transform(test.content)
+    if args.cluster_on == "embeddings":
+        Ztr, Zva, Zte = (mc.embedding_vectors(d.doc_id) for d in (train, val, test))
     timings["features"] = time.time() - t
-    print(f"TF-IDF {Xtr.shape[1]:,} words, SVD {feats.n_components} dims "
-          f"(explained variance {feats.explained_variance:.1%}), {timings['features']:.0f}s")
+    print(f"TF-IDF {Xtr.shape[1]:,} words; clusters on {args.cluster_on} ({Ztr.shape[1]} dims), "
+          f"{timings['features']:.0f}s")
 
     t = time.time()
     globals_, rows = {}, []
@@ -125,33 +139,33 @@ def main() -> int:
           .to_string(index=False))
 
     # predictions of the chosen setting: val + test (test never scored)
-    Xte, Zte = feats.transform(test.content)
     c_va, c_te = km.predict(Zva), km.predict(Zte)
     p_va, p_te = clf.predict_proba(Xva, c_va), clf.predict_proba(Xte, c_te)
     preds = pd.concat([pd.DataFrame({"doc_id": val.doc_id, "split": "val", "prob_fake": p_va}),
                        pd.DataFrame({"doc_id": test.doc_id, "split": "test", "prob_fake": p_te})])
-    pred_file = save_predictions(preds, model="model_c", regime=args.regime)
+    pred_file = save_predictions(preds, model=model_name, regime=args.regime)
     clusters = pd.concat([pd.DataFrame({"doc_id": d.doc_id, "split": s, "cluster": lab})
                           for d, s, lab in ((train, "train", km.labels_), (val, "val", c_va), (test, "test", c_te))])
-    cluster_file = prediction_path("model_c", args.regime).with_name(f"model_c__{args.regime}__clusters.csv")
+    cluster_file = prediction_path(model_name, args.regime).with_name(f"{model_name}__{args.regime}__clusters.csv")
     clusters.sort_values("doc_id").to_csv(cluster_file, index=False)
 
-    # per-cluster table
-    p_glob_va = globals_[c].predict_proba(Xva)[:, 1]
+    # per-cluster table (the global LR at its own best C, as everywhere else)
+    p_glob_va = p_glob_best
     auc = lambda y, p: round(roc_auc_score(y, p), 4) if len(np.unique(y)) == 2 else np.nan
     table = pd.DataFrame([dict(cluster=j, n_train=int(clf.n_train[j]), fake_share_train=round(clf.fake_share[j], 4),
                                fallback=bool(clf.fallback[j]), n_val=int((c_va == j).sum()),
                                val_auc_model_c=auc(yva[c_va == j], p_va[c_va == j]),
                                val_auc_global_lr=auc(yva[c_va == j], p_glob_va[c_va == j]),
                                top_terms=", ".join(terms))
-                          for j, terms in enumerate(feats.top_terms(km.cluster_centers_, 12))])
+                          for j, terms in enumerate(mc.member_top_terms(Xtr, km.labels_, feats.tfidf.get_feature_names_out(), 12))])
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    tuning.to_csv(REPORT_DIR / f"{args.regime}_tuning.csv", index=False)
-    table.sort_values("n_train", ascending=False).to_csv(REPORT_DIR / f"{args.regime}_clusters.csv", index=False)
+    tuning.to_csv(REPORT_DIR / f"{args.regime}{tag}_tuning.csv", index=False)
+    table.sort_values("n_train", ascending=False).to_csv(REPORT_DIR / f"{args.regime}{tag}_clusters.csv", index=False)
     summary = {
-        "regime": args.regime, "design": design, "k": k, "c": c,
-        "n_components": feats.n_components, "explained_variance": round(feats.explained_variance, 4),
+        "regime": args.regime, "cluster_on": args.cluster_on, "design": design, "k": k, "c": c,
+        "cluster_dims": int(Ztr.shape[1]),
+        "svd_explained_variance": round(feats.explained_variance, 4) if args.cluster_on == "svd" else None,
         "tfidf_words": int(Xtr.shape[1]), "min_cluster_size": mc.MIN_CLUSTER_SIZE,
         "fallback_clusters": int(clf.fallback.sum()),
         "selection": "max val ROC-AUC of model_c over the K x C grid" if design == "compare"
@@ -166,9 +180,9 @@ def main() -> int:
         "n": {"train": len(train), "val": len(val), "test": len(test)},
         "seconds": {key: round(v, 1) for key, v in timings.items()},
     }
-    (REPORT_DIR / f"{args.regime}_summary.json").write_text(json.dumps(summary, indent=2, default=float) + "\n")
+    (REPORT_DIR / f"{args.regime}{tag}_summary.json").write_text(json.dumps(summary, indent=2, default=float) + "\n")
     print(f"\nWrote {pred_file.relative_to(config.PROJECT_ROOT)}, {cluster_file.relative_to(config.PROJECT_ROOT)}, "
-          f"reports/model_c/{args.regime}_*")
+          f"reports/model_c/{args.regime}{tag}_*")
     return 0
 
 

@@ -285,40 +285,47 @@ all parameters, key numbers and limitations in [REPORT_NOTES.md](reports/minhash
 
 ### Topic clusters and Model C (K-means, Person 2)
 
-Model C groups the articles into topics with K-means and trains one logistic regression per topic.
+Model C groups the articles into topics with K-means and trains one logistic regression per topic (cluster routing).
 Walkthrough, figures and the analysis of the topic shortcut: [notebooks/05-kmeans.ipynb](notebooks/05-kmeans.ipynb).
 
-1. TF-IDF of `content`, then TruncatedSVD to 200 dimensions and L2 normalisation (all fitted on train).
-2. K-means on the train SVD vectors (k-means++, 10 restarts).
-3. One logistic regression per cluster on the full TF-IDF features. A cluster with fewer than 200 train articles or
-   only one class falls back to a global logistic regression.
+1. Classifier features: TF-IDF of `content` (fitted on train).
+2. Cluster vectors (`--cluster-on`): the sentence **embeddings** (default) or TF-IDF reduced to 200 dimensions with
+   TruncatedSVD (`svd`, a comparison). K-means on the train vectors (k-means++, 10 restarts).
+3. One logistic regression per cluster on the TF-IDF features. A cluster with fewer than 200 train articles or only one
+   class falls back to a global logistic regression.
 4. A new article goes to its nearest centroid and is scored by that cluster's classifier.
 
 ```bash
-python scripts/run_model_c.py --regime grouped       # ~30 s: compares K in {8, 16, 32} x C in {10, 30, 100} on val
-python scripts/run_model_c.py --regime random        # keeps the K and C chosen on grouped; only the split differs
+python scripts/run_model_c.py --regime grouped                    # ~40 s: compares K in {8, 16, 32} x C in {10, 30, 100} on val
+python scripts/run_model_c.py --regime random                     # keeps the K and C chosen on grouped; also --regime cluster
+python scripts/run_model_c.py --regime grouped --cluster-on svd   # the TF-IDF + SVD comparison (files tagged __svd / _svd)
 ```
 
 ```python
 from fake_news.models.model_c import ModelC
-model = ModelC(k=8, c=100).fit(train.content, train.is_fake)      # the chosen setting
-prob_fake, cluster = model.predict_proba(val.content), model.assign(val.content)
+model = ModelC(k=8, c=100).fit(train.content, train.is_fake, train.doc_id)     # doc_ids look up the embeddings
+prob_fake, cluster = model.predict_proba(val.content, val.doc_id), model.assign(val.content, val.doc_id)
 ```
 
-The setting is chosen on grouped val by Model C's ROC-AUC: **K = 8, C = 100**. Every run also scores a global
-logistic regression on the same features (tuned over the same C values) as the comparison, and a `topic_only`
-reference that predicts the cluster's train fake share.
+The setting is chosen on grouped val by Model C's ROC-AUC (**K = 8, C = 100** in both spaces) and kept on the other
+splits. Every run also scores a global logistic regression on the same features (the "no routing" configuration, tuned
+over the same C values) and a `topic_only` reference that predicts the cluster's train fake share.
 
-- `data/processed/predictions/model_c__<regime>.csv`: `doc_id, split, prob_fake` for val and test, the shared format.
-- `data/processed/predictions/model_c__<regime>__clusters.csv`: `doc_id, split, cluster` for every article.
-- `reports/model_c/<regime>_tuning.csv`, `_clusters.csv`, `_summary.json`: every setting on val, a per-cluster table
-  (size, fake share, top words, val ROC-AUC of Model C and the global model), and the chosen setting.
+| Val ROC-AUC (K = 8) | random | grouped | cluster |
+|---|---|---|---|
+| global LR (no routing) | 0.978 | 0.979 | 0.975 |
+| Model C, embedding clusters | 0.975 | 0.975 | 0.962 |
+| Model C, SVD clusters | 0.976 | 0.977 | 0.969 |
+| cluster alone (embeddings / SVD) | 0.71 / 0.75 | 0.71 / 0.75 | 0.72 / 0.77 |
 
-**For Model D: give the blender the cluster id too.** On its own Model C is slightly below a global logistic regression
-(val ROC-AUC 0.976 vs 0.978 on grouped), but the average of the two is above both (+0.0025). A control with random groups
-instead of topics makes things worse, so the gain comes from the topics. The 8 per-cluster classifiers are trained
-separately, so their probabilities may be on slightly different scales; with the `cluster` column (join the clusters file
-on `doc_id`) the blender can correct for that. Fit the blending on val and never on test.
+Cluster routing does not beat one global classifier, and it loses clearly more on unseen topics (`cluster`: −2.7
+accuracy points with embedding clusters vs −0.75 for the global LR). Averaged with the global LR it gives a small, real
+gain on seen topics (+0.0015; controls in notebook 05), which disappears on unseen topics.
+
+- `data/processed/predictions/model_c[_svd]__<regime>.csv`: `doc_id, split, prob_fake` for val and test.
+- `data/processed/predictions/model_c[_svd]__<regime>__clusters.csv`: `doc_id, split, cluster` for every article.
+- `reports/model_c/<regime>[__svd]_tuning.csv`, `_clusters.csv`, `_summary.json`: every setting on val, a per-cluster
+  table (size, fake share, characteristic words, val ROC-AUC of Model C and the global model), and the chosen setting.
 
 ### Paths and constants
 

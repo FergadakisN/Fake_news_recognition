@@ -3,13 +3,17 @@
 The idea: fake news may be written differently in different topics, so a classifier that specialises in
 one topic could pick up signals a single global classifier misses. Model C:
 
-1. **Topic features (train only).** TF-IDF of ``content`` (sparse, ~50k words), then TruncatedSVD to
-   ``n_components`` dense dimensions (LSA "topics"), then L2 normalisation. On unit vectors Euclidean
-   K-means groups articles by cosine similarity.
-2. **Clusters (train only).** K-means (Lloyd's algorithm, k-means++ initialisation, ``n_init`` restarts)
-   on the SVD vectors of the training articles.
+1. **Features (train only).** TF-IDF of ``content`` (sparse, ~50k words) for the classifiers.
+2. **Clusters (train only).** K-means (Lloyd's algorithm, k-means++ initialisation, ``n_init`` restarts) on one of
+   two vector spaces, chosen with ``cluster_on``:
+
+   - ``"embeddings"`` (default): the 384-d sentence embeddings (all-MiniLM-L6-v2, ``embeddings_for``). They capture
+     meaning, so articles about the same story cluster together even with different words.
+   - ``"svd"``: TruncatedSVD of the TF-IDF matrix to ``n_components`` dense dimensions (LSA "topics").
+
+   Both are L2-normalised; on unit vectors Euclidean K-means groups articles by cosine similarity.
 3. **One classifier per cluster.** A logistic regression on the full TF-IDF features of that cluster's
-   training articles. The SVD vectors only decide the cluster; the words decide fake or real.
+   training articles. The cluster vectors only decide the cluster; the words decide fake or real.
    **Fallback:** a cluster with fewer than ``min_cluster_size`` training articles, or with only one class,
    uses a global logistic regression trained on all training articles instead.
 4. **Predict.** A new article goes to its nearest centroid and is scored by that cluster's classifier.
@@ -19,9 +23,11 @@ Everything is fitted on train only; val and test are only transformed.
 The pieces are separate functions so that a tuning script can fit TF-IDF/SVD once, K-means once per K and
 the classifiers once per C. ``ModelC`` wraps them for normal use::
 
-    model = ModelC(k=8, c=30).fit(train.content, train.is_fake)
-    prob_fake = model.predict_proba(val.content)
-    cluster = model.assign(val.content)
+    model = ModelC(k=8, c=100).fit(train.content, train.is_fake, train.doc_id)
+    prob_fake = model.predict_proba(val.content, val.doc_id)
+    cluster = model.assign(val.content, val.doc_id)
+
+``doc_ids`` are needed to look up the embeddings; with ``cluster_on="svd"`` they can be left out.
 """
 
 from __future__ import annotations
@@ -43,6 +49,7 @@ DEFAULT_K = 8
 DEFAULT_C = 100.0
 N_COMPONENTS = 200
 MIN_CLUSTER_SIZE = 200
+CLUSTER_SPACES = ("embeddings", "svd")
 TFIDF_PARAMS = dict(max_features=50_000, min_df=5, max_df=0.5, sublinear_tf=True, stop_words="english",
                     dtype=np.float32)
 
@@ -78,6 +85,23 @@ class TopicFeatures:
         terms = self.tfidf.get_feature_names_out()
         weights = self.svd.inverse_transform(centers)
         return [list(terms[np.argsort(-w)[:n]]) for w in weights]
+
+
+def member_top_terms(X, clusters: np.ndarray, terms, n: int = 10) -> list[list[str]]:
+    """Most characteristic words per cluster: mean TF-IDF of its members minus the mean over all rows.
+
+    Works for any cluster space (embedding centroids cannot be mapped back to words).
+    """
+    overall = np.asarray(X.mean(axis=0)).ravel()
+    return [list(np.asarray(terms)[np.argsort(-(np.asarray(X[clusters == k].mean(axis=0)).ravel() - overall))[:n]])
+            for k in range(int(clusters.max()) + 1)]
+
+
+def embedding_vectors(doc_ids) -> np.ndarray:
+    """L2-normalised sentence embeddings of ``doc_ids`` (rows in the same order)."""
+    from fake_news.features.embeddings import embeddings_for
+
+    return embeddings_for(doc_ids)
 
 
 # ---------------------------------------------------------------- 2. clusters
@@ -141,28 +165,40 @@ def topic_only_proba(fake_share: np.ndarray, clusters: np.ndarray, default: floa
 class ModelC:
     """Topic clusters (K-means) + one logistic regression per cluster. Fit on train only."""
 
-    def __init__(self, k: int = DEFAULT_K, c: float = DEFAULT_C, n_components: int = N_COMPONENTS,
-                 min_cluster_size: int = MIN_CLUSTER_SIZE, seed: int = config.SEED):
-        self.k, self.c, self.min_cluster_size, self.seed = k, c, min_cluster_size, seed
+    def __init__(self, k: int = DEFAULT_K, c: float = DEFAULT_C, cluster_on: str = "embeddings",
+                 n_components: int = N_COMPONENTS, min_cluster_size: int = MIN_CLUSTER_SIZE, seed: int = config.SEED):
+        if cluster_on not in CLUSTER_SPACES:
+            raise ValueError(f"cluster_on must be one of {CLUSTER_SPACES}, got {cluster_on!r}")
+        self.k, self.c, self.cluster_on, self.min_cluster_size, self.seed = k, c, cluster_on, min_cluster_size, seed
         self.features = TopicFeatures(n_components=n_components, seed=seed)
 
-    def fit(self, texts, y) -> "ModelC":
-        X, Z = self.features.fit_transform(texts)
-        self.kmeans = fit_kmeans(Z, self.k, seed=self.seed)
+    def _vectors(self, Z_svd: np.ndarray, doc_ids) -> np.ndarray:
+        if self.cluster_on == "svd":
+            return Z_svd
+        if doc_ids is None:
+            raise ValueError("cluster_on='embeddings' needs the doc_ids of the texts")
+        return embedding_vectors(doc_ids)
+
+    def fit(self, texts, y, doc_ids=None) -> "ModelC":
+        X, Z_svd = self.features.fit_transform(texts)
+        self.kmeans = fit_kmeans(self._vectors(Z_svd, doc_ids), self.k, seed=self.seed)
         self.global_lr = fit_global_lr(X, y, self.c)
         self.classifiers = fit_cluster_classifiers(X, y, self.kmeans.labels_, self.c, self.global_lr,
                                                    k=self.k, min_cluster_size=self.min_cluster_size)
+        self._terms = self.features.tfidf.get_feature_names_out()
+        self._top = member_top_terms(X, self.kmeans.labels_, self._terms)
         return self
 
-    def assign(self, texts) -> np.ndarray:
+    def assign(self, texts, doc_ids=None) -> np.ndarray:
         """Cluster id (nearest centroid) of each text."""
-        _, Z = self.features.transform(texts)
-        return self.kmeans.predict(Z)
+        _, Z_svd = self.features.transform(texts)
+        return self.kmeans.predict(self._vectors(Z_svd, doc_ids))
 
-    def predict_proba(self, texts) -> np.ndarray:
+    def predict_proba(self, texts, doc_ids=None) -> np.ndarray:
         """P(fake) of each text."""
-        X, Z = self.features.transform(texts)
-        return self.classifiers.predict_proba(X, self.kmeans.predict(Z))
+        X, Z_svd = self.features.transform(texts)
+        return self.classifiers.predict_proba(X, self.kmeans.predict(self._vectors(Z_svd, doc_ids)))
 
     def top_terms(self, n: int = 10) -> list[list[str]]:
-        return self.features.top_terms(self.kmeans.cluster_centers_, n)
+        """Most characteristic words of each cluster's training articles."""
+        return [t[:n] for t in self._top]
