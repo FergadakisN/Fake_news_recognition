@@ -17,6 +17,8 @@ data/**/*
 !data/processed/clean_fingerprint.json
 !data/processed/near_dup_groups.csv
 !data/processed/near_dup_groups_minhash.csv
+# topic clusters behind split_cluster (scripts/build_cluster_split.py)
+!data/processed/topic_clusters.csv
 # LSH neighbour features of the shared splits (~1.5 MB each); seed variants are regenerated, not committed
 !data/processed/features/lsh__*.csv
 data/processed/features/lsh__*__seed*.csv

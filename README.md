@@ -103,8 +103,8 @@ val   = df[df.split == "val"]
 df = load_dataset("random", columns=["content"])   # less memory: doc_id, content, is_fake, split
 ```
 
-`load_dataset(regime)` takes `"random"` now; `"grouped"` (near-duplicate groups kept together) and
-`"cluster"` (whole K-means clusters held out) appear once those columns are added to `splits.csv`.
+`load_dataset(regime)` takes `"random"`, `"grouped"` (near-duplicate groups kept together) and `"cluster"`
+(whole topic clusters held out, see below).
 
 | Function (`from fake_news.data import ...`) | Returns |
 |---|---|
@@ -148,6 +148,33 @@ save_split_column("grouped", split)                         # adds split_grouped
 
 For a few large K-means clusters use `make_group_split(clean, clusters, stratify=False)`.
 `save_split_column` refuses to overwrite an existing column unless `overwrite=True`.
+
+### The cluster split (Person 2)
+
+`split_cluster` holds out whole **topic clusters**: val and test contain topics that no training article belongs to.
+It is the hardest of the three regimes and tests whether a model generalises to unseen stories.
+
+```bash
+python scripts/build_cluster_split.py      # ~25 s; refuses to overwrite split_cluster (pass --overwrite)
+```
+
+1. K-means (K = 32) on the sentence embeddings of **all** cleaned articles. No labels are used, so, like the
+   near-duplicate groups, the clusters can exist before the split. (K-means *inside* a model is still fitted on train.)
+2. A near-duplicate group whose copies fall into different clusters is moved into its majority cluster (258 articles),
+   so no copy of a story crosses partitions.
+3. Whole clusters are assigned with `make_group_split(stratify=False)`. 500 assignment orders are tried and the one
+   closest to 70/15/15 with the overall fake share in every partition is kept (at least 3 clusters in val and in test).
+   Only sizes and the overall label balance are used, never a model result.
+
+| Partition | Share | Fake share | Held-out topics |
+|---|---|---|---|
+| train | 69.3% | 44.3% | 22 clusters |
+| val | 15.0% | 44.9% | Brexit, Clinton emails/FBI, North Korea, Russia investigation, police/shootings |
+| test | 15.7% | 44.4% | health/medicine, Russia/Putin, White House staff, Democratic primaries, Republican primaries |
+
+Neighbouring topics can stay in train (e.g. other Russia or election clusters), so "unseen" means an unseen
+*cluster*, not a subject that never occurs. Files: `data/processed/topic_clusters.csv` (`doc_id, cluster`, in git),
+`reports/cluster_split/clusters.csv` (size, fake share, partition, top words per cluster) and `summary.json`.
 
 ### Sentence embeddings (Person 3)
 
