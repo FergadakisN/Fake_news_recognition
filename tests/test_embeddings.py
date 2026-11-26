@@ -1,10 +1,15 @@
-"""Unit tests for fake_news.features.embeddings, with a fake encoder (no model download, no GPU)."""
+"""Unit tests for fake_news.features.embeddings: the embedding cache (with a fake encoder: no model download,
+no GPU) and the logistic-regression classifier (on synthetic data)."""
+
+import hashlib
+import json
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import fake_news.data
+import fake_news.evaluation
 from fake_news import config
 from fake_news.features import embeddings as emb
 
@@ -70,6 +75,25 @@ def test_cache_is_reused_and_detects_stale_data(env):
     assert enc.calls == 2
 
 
+def test_fingerprint_ignores_line_endings_and_accepts_legacy_hash(env):
+    fp = env["fp"]
+    lf_content = fp.read_bytes()
+    lf_fingerprint = emb.data_fingerprint()
+    crlf_content = lf_content.replace(b"\n", b"\r\n")
+    fp.write_bytes(crlf_content)
+    assert emb.data_fingerprint() == lf_fingerprint
+
+    enc = FakeEncoder()
+    meta = emb.build_embeddings(encoder=enc, log=lambda *_: None)
+    meta["data_fingerprint"] = hashlib.sha256(crlf_content).hexdigest()[:16]
+    emb.artifact_paths()["meta"].write_text(json.dumps(meta))
+    fp.write_bytes(lf_content)
+
+    emb.build_embeddings(encoder=enc, log=lambda *_: None)
+    emb.load_embeddings()
+    assert enc.calls == 1
+
+
 def test_sample_is_stored_separately(env):
     emb.build_embeddings(sample=3, encoder=FakeEncoder(), log=lambda *_: None)
     E, ids = emb.load_embeddings(sample=3)
@@ -90,3 +114,45 @@ def test_resume_skips_finished_chunks(env, tmp_path):
     enc.calls = 0
     emb.encode_chunked(enc, texts, parts, "other inputs", chunk_size=3, log=lambda *_: None)
     assert enc.calls == 4  # changed key: everything redone
+
+
+# ---------------------------------------------------------------------------------------------------------
+# Classifier: frozen embeddings + logistic regression
+# ---------------------------------------------------------------------------------------------------------
+
+def _fake_data(n=400, seed=0):
+    rng = np.random.default_rng(seed)
+    y = rng.integers(0, 2, n)
+    X = rng.normal(size=(n, 16)) + y[:, None] * 0.8
+    return (X / np.linalg.norm(X, axis=1, keepdims=True)).astype(np.float32), y
+
+
+def test_tune_picks_best_val_auc():
+    X, y = _fake_data()
+    model, C, table = emb.tune_classifier(X[:300], y[:300], X[300:], y[300:], Cs=(0.001, 1.0), log=lambda *_: None)
+    assert C == table.roc_auc.idxmax()
+    assert table.roc_auc.max() > 0.8
+    p = model.predict_proba(X[300:])[:, 1]
+    assert ((p >= 0) & (p <= 1)).all()
+
+
+def test_run_classifier_writes_val_and_test_only(tmp_path, monkeypatch):
+    X, y = _fake_data()
+    ids = np.arange(len(y)) * 3
+    split = np.array(["train"] * 280 + ["val"] * 60 + ["test"] * 60)
+    df = pd.DataFrame({"doc_id": ids, "is_fake": y, "split": split})
+    saved = {}
+
+    monkeypatch.setattr(fake_news.data, "load_dataset", lambda regime, columns=None: df.copy())
+    monkeypatch.setattr(emb, "embeddings_for", lambda doc_ids: X[np.searchsorted(ids, np.asarray(doc_ids))])
+    monkeypatch.setattr(emb, "load_meta", lambda: {"model": "m", "dim": 16, "data_fingerprint": "f"})
+    monkeypatch.setattr(fake_news.evaluation, "save_predictions",
+                        lambda preds, model, regime: saved.update(p=preds) or "x.csv")
+    monkeypatch.setattr(config, "REPORTS_DIR", tmp_path, raising=False)
+
+    report = emb.run_classifier("grouped", Cs=(0.1, 1.0), log=lambda *_: None)
+    p = saved["p"]
+    assert list(p.columns) == ["doc_id", "split", "prob_fake"]
+    assert set(p.split) == {"val", "test"} and len(p) == 120 and p.doc_id.is_unique
+    assert report["C"] in (0.1, 1.0) and report["n"] == {"train": 280, "val": 60, "test": 60}
+    assert (tmp_path / "embeddings_lr" / "grouped.json").exists()

@@ -11,6 +11,9 @@ Typical use::
     df = load_dataset("random", columns=["content"])
     X = embeddings_for(df.doc_id)            # (n, 384) float32, row i belongs to df.doc_id.iloc[i]
 
+The main model (frozen embeddings + logistic regression) is at the end of this module: ``run_classifier``,
+run by ``python3 scripts/run_embeddings_lr.py --regime grouped|random``.
+
 Build the cache with ``python scripts/compute_embeddings.py`` (GPU recommended). Vectors are L2-normalized,
 so cosine similarity is a dot product: ``X[i] @ X[j]``.
 """
@@ -58,7 +61,25 @@ def _fingerprint_file() -> Path:
 def data_fingerprint() -> str:
     "Short hash of clean_fingerprint.json: changes whenever Person 1 changes the cleaned data."
     f = _fingerprint_file()
-    return hashlib.sha256(f.read_bytes()).hexdigest()[:16] if f.exists() else "missing"
+    if not f.exists():
+        return "missing"
+    content = f.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()[:16]
+
+
+def _matches_data_fingerprint(fingerprint: str) -> bool:
+    "Accept current fingerprints and legacy hashes made before normalizing line endings."
+    f = _fingerprint_file()
+    if not f.exists():
+        return fingerprint == "missing"
+    content = f.read_bytes()
+    normalized = content.replace(b"\r\n", b"\n")
+    candidates = {
+        hashlib.sha256(normalized).hexdigest()[:16],
+        hashlib.sha256(content).hexdigest()[:16],
+        hashlib.sha256(normalized.replace(b"\n", b"\r\n")).hexdigest()[:16],
+    }
+    return fingerprint in candidates
 
 
 def _ids_hash(doc_ids) -> str:
@@ -188,7 +209,7 @@ def build_embeddings(sample: int | None = None, *, batch_size: int | None = None
     paths = artifact_paths(sample)
     if not rebuild and paths["meta"].exists():
         meta = json.loads(paths["meta"].read_text())
-        if meta.get("data_fingerprint") == data_fingerprint() and paths["vectors"].exists():
+        if _matches_data_fingerprint(meta.get("data_fingerprint", "")) and paths["vectors"].exists():
             log(f"{paths['vectors'].name} is up to date ({meta['n_docs']:,} articles); use rebuild=True to redo")
             return meta
         log("cleaned data changed since the cache was built: rebuilding")
@@ -246,7 +267,7 @@ def load_embeddings(sample: int | None = None, check: bool = True) -> tuple[np.n
     """All cached vectors (float32) and their doc_ids (sorted). Raises StaleEmbeddingsError if the cleaned
     data changed since they were built (``check=False`` skips this)."""
     meta, paths = load_meta(sample), artifact_paths(sample)
-    if check and meta["data_fingerprint"] != data_fingerprint():
+    if check and not _matches_data_fingerprint(meta["data_fingerprint"]):
         raise StaleEmbeddingsError(
             f"{paths['vectors'].name} was built from another version of the cleaned data "
             f"({meta['data_fingerprint']} vs {data_fingerprint()}). Rebuild: python scripts/compute_embeddings.py")
@@ -290,3 +311,110 @@ def check_embeddings(sample: int | None = None) -> list[str]:
         assert np.array_equal(ids, clean_ids), "doc_ids differ from load_clean()"
         passed.append(f"exactly the {len(clean_ids):,} cleaned articles")
     return passed
+
+# ---------------------------------------------------------------------------------------------------------
+# Main model: frozen embeddings + logistic regression
+# ---------------------------------------------------------------------------------------------------------
+# Protocol, as for every model in the project: fit on ``train`` only, choose C on ``val`` (ROC-AUC, the
+# same criterion as Model C), predict ``val`` and ``test``. ``test`` is predicted but never scored here.
+# Run it with ``python3 scripts/run_embeddings_lr.py --regime grouped`` (and ``--regime random``).
+
+LR_MODEL = "embeddings_lr"
+LR_C_GRID = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 1000.0)
+LR_SELECT_BY = "roc_auc"
+LR_REPORT_KEYS = ("accuracy", "precision", "recall", "f1", "roc_auc")
+
+
+def lr_report_dir() -> Path:
+    "reports/embeddings_lr/: validation scores and chosen C per regime."
+    return Path(getattr(config, "REPORTS_DIR", Path(config.FIGURES_DIR).parent)) / LR_MODEL
+
+
+def make_classifier(C: float):
+    """Standardize the 384 dimensions, then L2-regularized logistic regression.
+
+    The vectors are L2-normalized, so each dimension is tiny (~0.05); standardizing puts them on a common
+    scale, which makes the C grid meaningful. The scaler is part of the model: fitted on train only.
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    return make_pipeline(StandardScaler(), LogisticRegression(C=C, max_iter=5000, random_state=config.SEED))
+
+
+LR_TOL = 0.001  # val ROC-AUC differences smaller than this are treated as noise
+
+
+def tune_classifier(X_tr, y_tr, X_va, y_va, Cs=LR_C_GRID, log: Callable[[str], None] = print):
+    """Fit one model per C on train and score each on val. Returns (model, C, table of val scores).
+
+    Picks the smallest C (strongest regularization) whose val ROC-AUC is within LR_TOL of the best:
+    the simplest model that performs as well as the best one.
+    """
+    from fake_news.evaluation import evaluate
+
+    rows, models = [], {}
+    for C in Cs:
+        t0 = time.time()
+        models[C] = make_classifier(C).fit(X_tr, y_tr)
+        s = evaluate(y_va, models[C].predict_proba(X_va)[:, 1])
+        rows.append({"C": C, **{k: float(s[k]) for k in LR_REPORT_KEYS}, "seconds": round(time.time() - t0, 1)})
+        log(f"  C={C:<7g} val ROC-AUC {s['roc_auc']:.4f}  F1 {s['f1']:.4f}  ({time.time() - t0:.1f}s)")
+    table = pd.DataFrame(rows).set_index("C")
+    best = table[LR_SELECT_BY].max()
+    best_C = min(c for c in Cs if table.loc[c, LR_SELECT_BY] >= best - LR_TOL)
+    return models[best_C], best_C, table
+
+
+def _load_regime(regime: str) -> pd.DataFrame:
+    from fake_news.data import load_dataset
+
+    try:
+        df = load_dataset(regime, columns=[])          # doc_id, is_fake, split
+    except Exception:
+        df = load_dataset(regime, columns=["content"])
+    return df[["doc_id", "is_fake", "split"]].reset_index(drop=True)
+
+
+def run_classifier(regime: str = "grouped", Cs=LR_C_GRID, log: Callable[[str], None] = print) -> dict:
+    """Train on train, tune C on val, save val + test predictions and the tuning report. Returns the report.
+
+    Writes ``data/processed/predictions/embeddings_lr__<regime>.csv`` (``doc_id, split, prob_fake``) and
+    ``reports/embeddings_lr/<regime>.json``.
+    """
+    from fake_news.evaluation import save_predictions
+
+    df = _load_regime(regime)
+    X = embeddings_for(df.doc_id)
+    y = df.is_fake.to_numpy()
+    m = {s: (df.split == s).to_numpy() for s in ("train", "val", "test")}
+    log(f"{LR_MODEL} on the {regime} split: train {m['train'].sum():,}, val {m['val'].sum():,}, "
+        f"test {m['test'].sum():,} (test predicted, not scored)")
+
+    model, best_C, table = tune_classifier(X[m["train"]], y[m["train"]], X[m["val"]], y[m["val"]], Cs, log)
+
+    keep = m["val"] | m["test"]
+    preds = pd.DataFrame({"doc_id": df.doc_id[keep].to_numpy(), "split": df.split[keep].to_numpy(),
+                          "prob_fake": model.predict_proba(X[keep])[:, 1]})
+    path = save_predictions(preds, model=LR_MODEL, regime=regime)
+
+    meta = load_meta()
+    report = {
+        "model": LR_MODEL, "regime": regime,
+        "encoder": meta["model"], "encoder_frozen": True, "embedding_dim": meta["dim"],
+        "classifier": "StandardScaler + LogisticRegression (L2, lbfgs)",
+        "selected_by": f"val {LR_SELECT_BY}", "C": best_C,
+        "val": table.loc[best_C, list(LR_REPORT_KEYS)].to_dict(),
+        "val_by_C": table.reset_index().to_dict(orient="records"),
+        "n": {s: int(v.sum()) for s, v in m.items()},
+        "data_fingerprint": meta["data_fingerprint"], "seed": config.SEED,
+    }
+    out = lr_report_dir() / f"{regime}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    _save_text(out, json.dumps(report, indent=2))
+    log(f"Best C = {best_C}: val ROC-AUC {report['val']['roc_auc']:.4f}, F1 {report['val']['f1']:.4f}")
+    if best_C in (min(Cs), max(Cs)):
+        log(f"  WARNING: best C is at the edge of the grid {tuple(Cs)}; consider extending LR_C_GRID")
+    log(f"Saved {path} and {out}")
+    return report
