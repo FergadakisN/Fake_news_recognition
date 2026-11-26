@@ -87,26 +87,108 @@ get the fallback and so count as predicted real.
   (12.9% vs 9.6%: fake stories get re-posted). With 2-word shingles real ones are (20.8% vs 16.0%), presumably because
   Reuters-style articles share fixed phrasing.
 - **Under the random split, much of the high F1 on covered articles is near-duplicate matching.** Near-copies of a val
-  article sit in train. The grouped split measures how much is left (next section).
+  article sit in train. The grouped split measures how much is left ("Random vs grouped split" below).
+
+## The near-duplicate groups behind `split_grouped` and the exclusion rule
+
+The groups have two tiers, merged with union-find (`data/processed/near_dup_groups.csv`, column `tier`):
+
+1. **MinHash:** 3-word shingles, LSH 16 × 8, exact Jaccard ≥ 0.7 (near-copies with the same wording).
+2. **Embeddings:** MiniLM vectors, exact top-10 cosine neighbours of every article. A pair is linked if
+   - cosine ≥ **0.92**, or
+   - 0.90 ≤ cosine < 0.92 **and** 3-word shingle containment ≥ **0.7** (the containment rule, below).
+
+### Why cosine 0.92 and not 0.90
+
+Below about 0.92, most embedding pairs are *different* articles about the same running news topic, and union-find
+chains a whole topic into one group:
+
+- **Topic chaining at 0.90.** One group held 35 different Reuters articles on the Hariri / Lebanon crisis from several
+  weeks ("Lebanon PM Hariri resigns, assails Iran and Hezbollah", "Hariri to fly to Paris within 48 hours", "Hariri
+  rescinds resignation"…), linked only by embeddings through hub articles (one with 14 links). Another 15 articles
+  covered months of travel-ban court cases.
+- At 0.92 the travel-ban chain is gone (largest group: 3 articles) and the Lebanon chain shrinks from 35 to 15.
+  **0.92 reduces topic chaining but does not remove it completely:** a 15-article Hariri group remains.
+- **Mixed fake/real groups: 80 at 0.90, 44 at 0.92** (13 with MinHash alone). Fake and real outlets cover the same
+  events, so topic-level links create mixed groups much faster than copies do.
+- Holding out whole topics is what `split_cluster` tests. The grouped split should remove copies and paraphrases of
+  the *same story*, so the two regimes stay distinct.
+
+| Cosine (no containment rule) | Groups (2+) | Articles | Largest | Mixed groups | Largest Hariri / travel-ban group |
+|---|---|---|---|---|---|
+| MinHash only | 1,002 | 2,445 | 40 | 13 | – |
+| 0.90 | 1,827 | 4,500 | 40 | 80 | 35 / 15 |
+| 0.92 | 1,402 | 3,412 | 40 | 44 | 15 / 3 |
+
+### Truncated copies are their own category
+
+Each embedding link MinHash did not have is described by its **containment**: the share of the *shorter* text's
+3-word shingles that also occur in the other text (`paraphrases.link_type`; descriptive only).
+
+| Type | Rule | Links (final) | What it is |
+|---|---|---|---|
+| truncated copy | containment ≥ 0.8, length ratio ≥ 1.5 | 189 | one text contains the other but is much longer (e.g. 1,662 vs 225 words, cosine 1.00, Jaccard 0.13) |
+| edited copy | containment ≥ 0.8, similar length | 127 | a copy with edits, Jaccard just below 0.7 |
+| partial overlap | 0.3 ≤ containment < 0.8 | 346 | shared passages: updated versions, long quotes |
+| paraphrase | containment < 0.3 | 167 | the same story in other words |
+
+**Truncated copies are copies MinHash misses because of length**, not paraphrases. Jaccard divides by the union,
+which the extra length inflates, so a fully contained text can score far below 0.7, while MiniLM, which only reads
+the opening, sees two identical texts. Examples: `truncated_copy_examples.csv` and `paraphrase_examples.csv`.
+
+### The containment rule
+
+Raising the threshold from 0.90 to 0.92 also dropped copies whose cosine was just below 0.92: **33 truncated-copy and
+26 edited-copy links** (0.92 keeps 156 of the 189 truncated copies, 83%). To recover them without the topic chains, a
+pair with 0.90 ≤ cosine < 0.92 is also linked if its containment is ≥ 0.7. Topic neighbours share almost no wording,
+so they cannot pass it. Of the 243 links the rule admits:
+
+- **all 33 truncated and all 26 edited copy links** are recovered;
+- **25 other links** are partial overlaps with containment 0.70–0.79 (two versions of one China trade story, the
+  "65 journalists" list from two sites, consecutive episodes of one podcast);
+- 159 fall inside existing MinHash groups and change nothing; **no paraphrase passes** (containment < 0.3);
+- **no chain comes back:** the largest groups are unchanged (40, 26, 20, 15, 13, 13), Hariri stays at 15 and travel
+  ban at 3. Groups 1,402 → 1,433, articles 3,412 → 3,494, mixed groups 44 → 46.
+
+Groups changed by the rule have the tier `embedding+containment` (37 groups, 79 articles) or `both+containment`
+(27 groups, 133 articles: a MinHash group enlarged by such a link).
+
+### Final groups
+
+| | Groups (2+) | Articles | Mixed fake/real |
+|---|---|---|---|
+| MinHash tier alone | 1,002 | 2,445 (3.9%) | 13 |
+| **final** | **1,433** | **3,494 (5.6%)** | **46** (101 articles) |
+| tier `minhash` (unchanged) | 914 | 2,195 | 10 |
+| tier `embedding` | 404 | 883 | 31 |
+| tier `embedding+containment` | 37 | 79 | 2 |
+| tier `both` | 51 | 204 | 3 |
+| tier `both+containment` | 27 | 133 | 0 |
+
+88 MinHash groups were enlarged or joined by embedding links. The largest group is still the 40-article comment-form
+widget group (tier `minhash`). One false link comes from a shared author-bio header (`NOTE_cleaning_residue.md`).
 
 ## Random vs grouped split (val)
 
 `split_grouped` keeps every near-duplicate group in one partition. It was first built from the MinHash groups alone
-(J ≥ 0.7); it now uses the two-tier groups (MinHash + embedding pairs with cosine ≥ 0.90). The retrieval design is
-fixed across regimes (2-word shingles, 64 × 2). Only `k` and `min_sim` were retuned on grouped val, and they came out
-the same every time (k = 5, min_sim = 0.10). So the differences below come from the split alone. (The val sets
-contain different articles but have the same class balance, 44.4% fake.)
+(J ≥ 0.7) and now uses the final groups above. The retrieval design is fixed across regimes (2-word shingles,
+64 × 2). Only `k` and `min_sim` were retuned on grouped val: min_sim came out 0.10 every time, and k again made no
+difference (k = 3 and k = 5 give identical results). So the differences below come from the split alone. (The val
+sets contain different articles but have the same class balance, 44.4% fake.)
 
 | Val set | Coverage | Fake / real coverage | F1 covered | ROC-AUC | F1 overall |
 |---|---|---|---|---|---|
 | random | 18.6% | 16.0% / 20.8% | 0.942 | 0.652 | 0.261 |
 | grouped, MinHash groups only (earlier) | 17.4% | 13.1% / 20.8% | 0.918 | 0.639 | 0.211 |
-| **grouped, two-tier groups (current)** | 15.9% | 11.6% / 19.3% | 0.902 | 0.625 | 0.187 |
+| grouped, cosine 0.90 (rejected) | 15.9% | 11.6% / 19.3% | 0.902 | 0.625 | 0.187 |
+| **grouped, final groups (0.92 + containment rule)** | **16.0%** | **11.8% / 19.3%** | **0.918** | **0.629** | **0.194** |
 
-Under the random split, **507 val articles (5.4%) have a member of their two-tier group in train** (6.6% of the
-fake ones, 4.5% of the real ones); with the MinHash groups alone it was 277 (3.0%). Under the grouped split there are
-none, by construction. Each step removes neighbours that are copies or paraphrases of the article: coverage drops by
-2.7 points in total, F1 on covered articles by 0.040 and ROC-AUC by 0.027. The embedding tier also lowers real
-coverage (20.8% → 19.3%), because it groups rewritten agency reports, not only re-posted fake stories. The drop
-stays moderate because cleaning had already removed exact duplicates and only 7.2% of articles are in a group.
-Test is not scored.
+**Leakage in the random split: 394 val articles (4.2%) have a member of their final near-duplicate group in train**
+(252 fake = 6.0% of the fake val articles; 142 real = 2.7%). With the MinHash groups alone it was 277 (3.0%). Under
+the grouped split there are none, by construction: `lsh_features_sanity_grouped.csv` shows 0 val and 0 test articles
+with a group member in train, and train and val look alike (83.5% vs 84.0% without a neighbour; fake share 0.913 vs
+0.912 for fake articles).
+
+Removing them costs mostly fake coverage (16.0% → 11.8%) and less real coverage (20.8% → 19.3%), and ROC-AUC drops
+from 0.652 to 0.629. The drop stays moderate because cleaning had already removed exact duplicates and only 5.6% of
+articles are in a group. Test is not scored.

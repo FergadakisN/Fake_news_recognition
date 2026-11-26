@@ -177,11 +177,11 @@ Walkthrough and figures: [notebooks/04-minhash-lsh.ipynb](notebooks/04-minhash-l
 | Tier | Finds | How | Script |
 |---|---|---|---|
 | MinHash | near-copies (same wording) | 3-word shingles, 128 MinHash values, LSH 16 × 8, exact Jaccard ≥ 0.7 | `find_near_duplicates.py` |
-| Embeddings | paraphrases (same story, other words) | MiniLM vectors, exact top-10 cosine neighbours, cosine ≥ 0.90 | `find_paraphrases.py` |
+| Embeddings | paraphrases and copies MinHash misses (e.g. truncated copies) | MiniLM vectors, exact top-10 cosine neighbours: cosine ≥ 0.92, or 0.90–0.92 with 3-word containment ≥ 0.7 | `find_paraphrases.py` |
 
 ```bash
 python scripts/find_near_duplicates.py                          # MinHash tier, ~1 min
-python scripts/find_paraphrases.py --threshold 0.90 --write     # embedding tier + merge -> final groups, ~1 min
+python scripts/find_paraphrases.py --write                      # embedding tier + merge -> final groups, ~1 min
 python scripts/build_grouped_split.py                           # rebuild split_grouped from the final groups
 python scripts/build_lsh_features.py --regime grouped           # then rebuild the grouped features
 ```
@@ -189,7 +189,9 @@ python scripts/build_lsh_features.py --regime grouped           # then rebuild t
 - `data/processed/near_dup_groups.csv` (**in git**): the final groups, `doc_id, group_id, tier` for every cleaned
   article. `group_id` is the smallest `doc_id` in the group (`group_id == doc_id` for an article without
   near-duplicates). `tier` says what linked the group: `minhash`, `embedding`, `both` (a MinHash group enlarged or
-  joined by embedding pairs) or `none` (singleton).
+  joined by embedding links) or `none` (singleton); `+containment` is appended (`embedding+containment`,
+  `both+containment`) when a link from the containment rule changed the group. Why these rules:
+  [LSH_FEATURES_DESIGN.md](reports/minhash/LSH_FEATURES_DESIGN.md).
 - `data/processed/near_dup_groups_minhash.csv` (**in git**): the MinHash tier alone (`doc_id, group_id`), the input
   of the merge.
 - `reports/minhash/`: statistics, threshold examples and comparisons for both tiers, the largest and mixed-label
@@ -268,7 +270,7 @@ config.SEED, config.SPLIT_FRACTIONS, config.SPLITS_CSV, config.PREDICTIONS_DIR, 
 | `data/processed/splits.csv` | **yes** | Shared splits |
 | `data/processed/clean_fingerprint.json` | **yes** | Row counts + hashes of the cleaned data |
 | `data/processed/embeddings/minilm__clean{.npy,__doc_ids.npy,.json}` | **yes** | Sentence embeddings (float16, ~48 MB), their `doc_id`s and metadata |
-| `data/processed/near_dup_groups.csv` | **yes** | Near-duplicate groups: `doc_id, group_id, tier` (MinHash J ≥ 0.7 + embeddings cosine ≥ 0.90) |
+| `data/processed/near_dup_groups.csv` | **yes** | Near-duplicate groups: `doc_id, group_id, tier` (MinHash J ≥ 0.7 + embeddings cosine ≥ 0.92 / containment rule) |
 | `data/processed/near_dup_groups_minhash.csv` | **yes** | MinHash tier of the groups alone: `doc_id, group_id` |
 | `data/processed/features/lsh__<regime>.csv` | **yes** | LSH neighbour features per article (`build_lsh_features.py`) |
 | `data/processed/predictions/<model>__<regime>.csv` | no | `doc_id, split, prob_fake` |
