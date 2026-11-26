@@ -193,6 +193,7 @@ def feature_distributions(feats: pd.DataFrame, labels: pd.Series, part: str = "v
         ax.bar(centers + w / 2, counts[1], width=w, color=FAKE, label="fake", edgecolor=SURFACE, linewidth=1)
         ax.set(xlabel=col, ylabel=f"{part} articles")
     axes[1].set_yscale("log")
+    axes[1].yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
     axes[1].set_ylabel(f"{part} articles (log scale)")
     axes[0].legend(loc="upper center")
     fig.suptitle(f"LSH neighbour features of the {has.sum():,} {part} articles with a neighbour "
