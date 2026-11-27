@@ -1,0 +1,4 @@
+split,n,share_no_neighbor,mean_max_jaccard,median_max_jaccard,mean_max_jaccard_if_any,mean_neighbor_count,share_fake_if_fake,share_fake_if_real,share_fake_if_fake_with_nb,share_fake_if_real_with_nb,with_group_member_in_train
+train,43326,0.8204,0.0385,0.0,0.2143,0.525,0.5008,0.3526,0.9079,0.0384,2166
+val,9392,0.9516,0.0101,0.0,0.2089,0.1231,0.4683,0.4253,0.9458,0.0656,0
+test,9807,0.9371,0.0148,0.0,0.235,0.2379,0.4696,0.4157,0.9345,0.051,0
