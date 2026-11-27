@@ -216,6 +216,31 @@ Val articles whose closest training article has a 2-word Jaccard ≥ t:
 Figures: `reports/figures/leakage_max_jaccard.png` (share of val with a train neighbour ≥ t, random vs grouped) and
 `lsh_features_val_grouped.png` (feature distributions).
 
+### Cluster split (`data/processed/features/lsh__cluster.csv`)
+
+`split_cluster` holds out whole K-means topic clusters in val and test. The features were built exactly as for
+grouped: the same train-only index, and training articles ignore their whole near-duplicate group. No near-duplicate
+group is split across partitions in `split_cluster`. Test labels were not used, so the test rows show label-free
+statistics only:
+
+| | grouped val | cluster val | grouped test | cluster test |
+|---|---|---|---|---|
+| no neighbour | 84.0% | **95.2%** | 83.9% | 93.7% |
+| mean `max_jaccard` | 0.034 | 0.010 | 0.034 | 0.015 |
+| mean `neighbor_count` | 0.46 | 0.12 | 0.41 | 0.24 |
+| coverage fake / real | 11.8% / 19.3% | 5.0% / 4.7% | – | – |
+| F1 of `fake_neighbor_share` on covered articles | 0.918 | 0.937 | – | – |
+| ROC-AUC of `fake_neighbor_share` (all articles) | 0.629 | **0.542** | – | – |
+
+- **On unseen topics the features weaken sharply,** because they rarely fire: only 4.8% of cluster-val articles have
+  a training article with J ≥ 0.1, against 16.0% under grouped. ROC-AUC falls from 0.629 to 0.542.
+- **When a neighbour exists it is still reliable** (F1 0.937 on covered articles), so the signal is mostly
+  same-topic similarity, and without the topic in train there is little left.
+- **Train and val features do not look alike under this split.** 18.0% of training articles have a neighbour (their
+  topics are in train), against 4.8% of val and 6.3% of test articles. The exclusion rule removes only the
+  near-duplicate group, not the topic. A classifier trained on these features therefore sees them fire far more
+  often in training than it will on held-out topics.
+
 ## 5. Limitations
 
 1. **The feature index misses weak neighbours.** At 0.1 ≤ J < 0.2, 64 × 2 finds about three quarters of the pairs
@@ -254,7 +279,7 @@ Figures: `reports/figures/leakage_max_jaccard.png` (share of val with a train ne
 python scripts/find_near_duplicates.py              # MinHash tier (~1 min)
 python scripts/find_paraphrases.py --write          # second tier + final groups
 python scripts/build_grouped_split.py               # split_grouped in splits.csv
-python scripts/build_lsh_features.py --regime random grouped   # ~10 min each
+python scripts/build_lsh_features.py --regime random grouped cluster   # ~10 min each
 python scripts/run_model_b.py --design fixed --regime grouped  # neighbour vote (analysis, val only)
 python scripts/evaluate_lsh.py                      # evaluation (~35 min the first time, then ~4 min)
 ```

@@ -250,8 +250,11 @@ neighbour (random split). In the grouped and cluster splits it also ignores its 
 val/test article never has a group member in train there. This keeps train features comparable to val/test
 features. Val/test features use training labels only.
 
-- `data/processed/features/lsh__<regime>.csv` (**in git**, ~2 MB each): `doc_id, split` and the three features.
-  Files for generated splits (`lsh__<regime>__seed<N>.csv`) are not in git; rebuild them with the command above.
+- `data/processed/features/lsh__<regime>.csv` (**in git**, ~2 MB each): `doc_id, split` and the three features,
+  for `random`, `grouped` and `cluster` (`lsh__cluster.csv`, built from `split_cluster` with
+  `python scripts/build_lsh_features.py --regime cluster`). Under the cluster split the features rarely fire on the
+  held-out topics: 95% of val articles have no neighbour, against 82% of train articles
+  ([REPORT_NOTES.md](reports/minhash/REPORT_NOTES.md)). Files for generated splits (`lsh__<regime>__seed<N>.csv`) are not in git; rebuild them with the command above.
 - `reports/minhash/lsh_features_sanity_<regime>.csv`: per partition, the share without neighbours, `max_jaccard`
   and `fake_neighbor_share` for fake vs real articles (train and val should look alike).
 
